@@ -1,0 +1,51 @@
+.page {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 72px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+}
+
+.header {
+  height: 52px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+}
+
+.title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 32px;
+  gap: 12px;
+}
+
+.emptyTitle {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 24px;
+  color: rgba(26, 18, 8, 0.5);
+}
+
+.emptySub {
+  font-size: 13px;
+  color: var(--ink-dim);
+  line-height: 1.65;
+  max-width: 280px;
+}

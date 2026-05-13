@@ -1,0 +1,69 @@
+.header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 52px;
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  z-index: 50;
+}
+
+.title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 17px;
+  color: var(--ink);
+}
+
+.count {
+  font-size: 11px;
+  color: var(--ink-muted);
+  letter-spacing: 0.06em;
+}
+
+.viewport {
+  position: fixed;
+  top: 52px;
+  left: 0;
+  right: 0;
+  bottom: 72px;
+  overflow: hidden;
+  touch-action: none;
+  background: var(--bg-raised);
+  cursor: grab;
+}
+
+.viewport:active { cursor: grabbing; }
+
+.canvas {
+  position: absolute;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+.empty {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  pointer-events: none;
+}
+
+.emptyTitle {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 26px;
+  color: rgba(26, 18, 8, 0.28);
+  margin-bottom: 10px;
+}
+
+.emptySub {
+  font-size: 13px;
+  color: rgba(26, 18, 8, 0.22);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}

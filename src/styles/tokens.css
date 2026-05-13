@@ -1,0 +1,39 @@
+/* Made Me Think of You — Design Tokens */
+
+:root {
+  /* Lauren — the body (parchment) */
+  --bg:         #F4ECD8;
+  --bg-raised:  #EDE3C6;
+  --bg-card:    #FAF6EC;
+
+  /* Utku — the chain (used only in nav bar and + button) */
+  --chain:        #0F0C08;
+  --chain-raised: #1C1610;
+  --chain-text:       #F0E6D0;
+  --chain-text-dim:   rgba(240, 230, 208, 0.45);
+  --chain-text-muted: rgba(240, 230, 208, 0.25);
+
+  /* Text */
+  --ink:        #1A1208;
+  --ink-dim:    rgba(26, 18, 8, 0.42);
+  --ink-muted:  rgba(26, 18, 8, 0.24);
+
+  /* Borders */
+  --border:        rgba(26, 18, 8, 0.08);
+  --border-strong: rgba(26, 18, 8, 0.18);
+
+  /* Card back (always light, always warm paper) */
+  --card-back: #F8F2E4;
+
+  /* Partner accent defaults */
+  --terracotta: #9C5E4A;
+  --brass:      #B8955A;
+
+  /* Type families */
+  --serif:  'Playfair Display', Georgia, serif;
+  --sans:   'DM Sans', system-ui, sans-serif;
+  --italic: 'Cormorant Garamond', Georgia, serif;
+
+  /* Shadows */
+  --shadow-card: 0 4px 20px rgba(26,18,8,0.12), 0 1px 4px rgba(26,18,8,0.06);
+}
