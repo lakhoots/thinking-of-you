@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import StepIdentity from './Onboarding/StepIdentity';
@@ -7,24 +7,34 @@ import styles from './Onboarding/Onboarding.module.css';
 export default function InviteAccept({ user, profile, onComplete }) {
   const { token } = useParams();
   const navigate = useNavigate();
-  const [phase, setPhase] = useState('init'); // init | identity | joining | done | error
+  const [phase, setPhase] = useState('init'); // init | identity | joining | error
   const [error, setError] = useState(null);
+  const joinAttempted = useRef(false);
 
-  // On mount: stash the token so post-signin we can resume here, then decide next.
   useEffect(() => {
     if (!token) return;
 
     if (!user) {
       sessionStorage.setItem('invite_token', token);
-      navigate('/');
+      navigate('/', { replace: true });
+      return;
+    }
+
+    // Already a partner — there's nothing to do on this route. Send them home.
+    if (profile?.partnership_id) {
+      sessionStorage.removeItem('invite_token');
+      navigate('/', { replace: true });
       return;
     }
 
     if (!profile) {
       setPhase('identity');
-    } else if (profile.partnership_id) {
-      onComplete();
-    } else {
+      return;
+    }
+
+    // Profile exists but no partnership — run the join once.
+    if (!joinAttempted.current) {
+      joinAttempted.current = true;
       joinNow();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -37,12 +47,14 @@ export default function InviteAccept({ user, profile, onComplete }) {
       const { data, error: rpcErr } = await supabase.rpc('join_partnership_by_token', { token });
       if (rpcErr) throw rpcErr;
       if (!data) throw new Error('Invite not found.');
-      setPhase('done');
       sessionStorage.removeItem('invite_token');
+      // Refresh the profile so the parent picks up the new partnership_id.
+      // The useEffect above will then navigate('/') on the next render.
       onComplete();
     } catch (err) {
       setError(err.message);
       setPhase('error');
+      joinAttempted.current = false;
     }
   };
 
