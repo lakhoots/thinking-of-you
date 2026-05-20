@@ -179,7 +179,7 @@
 
 .footer span {
   font-size: 9px;
-  color: var(--ink-muted);
+  color: rgba(26, 18, 8, 0.78);
   letter-spacing: 0.02em;
   display: block;
   white-space: nowrap;

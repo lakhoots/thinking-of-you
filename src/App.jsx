@@ -35,6 +35,58 @@ export default function App() {
     }
   }, [user, navigate]);
 
+  // Block page-level pinch-zoom where we can (iOS gesture* events,
+  // double-tap zoom). For paths we can't fully block — desktop trackpad
+  // pinch in Chromium browsers, Safari Responsive Design Mode — we also
+  // anchor chrome to the visual viewport via CSS vars below.
+  useEffect(() => {
+    const stop = (e) => e.preventDefault();
+    const opts = { passive: false };
+    document.addEventListener('gesturestart', stop, opts);
+    document.addEventListener('gesturechange', stop, opts);
+    document.addEventListener('gestureend', stop, opts);
+
+    let lastTouchEnd = 0;
+    const onTouchEnd = (e) => {
+      const now = Date.now();
+      if (now - lastTouchEnd < 350) e.preventDefault();
+      lastTouchEnd = now;
+    };
+    document.addEventListener('touchend', onTouchEnd, opts);
+
+    return () => {
+      document.removeEventListener('gesturestart', stop, opts);
+      document.removeEventListener('gesturechange', stop, opts);
+      document.removeEventListener('gestureend', stop, opts);
+      document.removeEventListener('touchend', onTouchEnd, opts);
+    };
+  }, []);
+
+  // Pin chrome (header / nav / rotateBar / modals) to the visual viewport.
+  // When the page is pinch-zoomed, the layout viewport stays put but the
+  // visual viewport shifts and shrinks — without this, position:fixed bars
+  // anchored to layout edges drift off-screen.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return;
+    const root = document.documentElement;
+    const update = () => {
+      root.style.setProperty('--vv-x', `${vv.offsetLeft}px`);
+      root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
+      root.style.setProperty('--vv-w', `${vv.width}px`);
+      root.style.setProperty('--vv-h', `${vv.height}px`);
+    };
+    update();
+    vv.addEventListener('resize', update);
+    vv.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+    return () => {
+      vv.removeEventListener('resize', update);
+      vv.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, []);
+
   if (authLoading) return (<><div className="grain" /><LoadingScreen /></>);
 
   // Not signed in

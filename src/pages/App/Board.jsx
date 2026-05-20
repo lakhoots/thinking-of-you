@@ -36,6 +36,10 @@ export default function Board({
   // localEdits[id] = { pos_x?, pos_y?, rotation? }. Each field is only
   // present once the user has touched it in the current edit session.
   const [localEdits, setLocalEdits] = useState({});
+  // Ordered list of ids the user has touched this session — last touched
+  // last. Drives the order we send to move_mementos so the server can
+  // bump z values so the most recent card lands on top.
+  const [moveOrder, setMoveOrder] = useState([]);
   const [savingArrange, setSavingArrange] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
   const [selectedId, setSelectedId] = useState(null);
@@ -118,6 +122,7 @@ export default function Board({
           const id = handleEl.dataset.resizeHandle;
           const m = mementos.find((x) => x.id === id);
           if (m) {
+            setMoveOrder((prev) => [...prev.filter((x) => x !== id), id]);
             const edit = localEdits[id] ?? {};
             const posX = edit.pos_x ?? m.pos_x;
             const posY = edit.pos_y ?? m.pos_y;
@@ -155,15 +160,16 @@ export default function Board({
             const id = cardEl.dataset.cardId;
             const m = mementos.find((x) => x.id === id);
             if (m) {
-              const start = localEdits[id] ?? { pos_x: m.pos_x, pos_y: m.pos_y };
+              const edit = localEdits[id] ?? {};
               draggingRef.current = {
                 id,
                 startScreenX: e.clientX,
                 startScreenY: e.clientY,
-                startPosX: start.pos_x,
-                startPosY: start.pos_y,
+                startPosX: edit.pos_x ?? m.pos_x,
+                startPosY: edit.pos_y ?? m.pos_y,
               };
               setDraggingId(id);
+              setMoveOrder((prev) => [...prev.filter((x) => x !== id), id]);
             }
           }
         }
@@ -380,9 +386,30 @@ export default function Board({
     };
   }, [pendingDelete]);
 
-  const visibleMementos = pendingDelete
+  const baseMementos = pendingDelete
     ? mementos.filter((m) => m.id !== pendingDelete.memento.id)
     : mementos;
+  // While arranging, preview the stack order the server will produce on
+  // Done — anything touched in this session sorts above untouched cards,
+  // in the order they were touched (last touched last → on top).
+  const baseMaxZ = arrangeMode
+    ? Math.max(0, ...baseMementos.map((m) => m.z ?? 0))
+    : 0;
+  const effectiveZ = (m) => {
+    if (!arrangeMode) return m.z ?? 0;
+    const idx = moveOrder.indexOf(m.id);
+    if (idx === -1) return m.z ?? 0;
+    return baseMaxZ + idx + 1;
+  };
+  const visibleMementos = baseMementos
+    .slice()
+    .sort((a, b) => {
+      const az = effectiveZ(a);
+      const bz = effectiveZ(b);
+      if (az !== bz) return az - bz;
+      // Stable tiebreaker for untouched pins, so they keep their pin-date order.
+      return (a.created_at ?? '').localeCompare(b.created_at ?? '');
+    });
 
   useEffect(() => {
     onArrangeModeChange?.(arrangeMode);
@@ -392,18 +419,28 @@ export default function Board({
     setFlippedId(null);
     setSelectedId(null);
     setLocalEdits({});
+    setMoveOrder([]);
     setArrangeMode(true);
   };
 
   const cancelArrange = () => {
     setLocalEdits({});
+    setMoveOrder([]);
     setSelectedId(null);
     setArrangeMode(false);
   };
 
   const doneArrange = async () => {
     if (savingArrange) return;
-    const moves = Object.entries(localEdits).map(([id, edit]) => {
+    // Build moves in moveOrder (last touched last) so the server's z bump
+    // lands the most recently moved card on top. Anything in localEdits
+    // not in moveOrder (shouldn't happen, but be safe) comes first.
+    const orderedIds = [
+      ...moveOrder.filter((id) => id in localEdits),
+      ...Object.keys(localEdits).filter((id) => !moveOrder.includes(id)),
+    ];
+    const moves = orderedIds.map((id) => {
+      const edit = localEdits[id];
       const orig = mementos.find((x) => x.id === id);
       return {
         id,
@@ -423,17 +460,24 @@ export default function Board({
     setSavingArrange(true);
     try {
       await moveMementos(moves);
-      moves.forEach((m) =>
+      // Local optimistic z bump matching the server's logic, so the
+      // reordering shows up immediately without waiting for the realtime
+      // round-trip. The server will overwrite with the authoritative
+      // values when the UPDATE event lands.
+      const baseZ = Math.max(0, ...mementos.map((m) => m.z ?? 0));
+      moves.forEach((m, i) =>
         onMementoSaved?.({
           id: m.id,
           pos_x: m.pos_x,
           pos_y: m.pos_y,
+          z: baseZ + i + 1,
           ...(m.rotation !== undefined ? { rotation: m.rotation } : {}),
           ...(m.scale !== undefined ? { scale: m.scale } : {}),
           ...(m.scale_y !== undefined ? { scale_y: m.scale_y } : {}),
         }),
       );
       setLocalEdits({});
+      setMoveOrder([]);
       setSelectedId(null);
       setArrangeMode(false);
     } catch (err) {

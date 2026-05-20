@@ -1,9 +1,9 @@
 .page {
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 72px;
+  top: var(--vv-y, 0px);
+  left: var(--vv-x, 0px);
+  width: var(--vv-w, 100%);
+  height: calc(var(--vv-h, 100vh) - 72px);
   display: flex;
   flex-direction: column;
   background: var(--bg);

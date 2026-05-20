@@ -24,7 +24,10 @@ input, textarea { font-family: inherit; }
 /* Paper grain overlay — covers entire app at ~4% opacity */
 .grain {
   position: fixed;
-  inset: 0;
+  top: var(--vv-y, 0px);
+  left: var(--vv-x, 0px);
+  width: var(--vv-w, 100%);
+  height: var(--vv-h, 100vh);
   pointer-events: none;
   z-index: 900;
   opacity: 0.04;
