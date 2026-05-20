@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MementoCard, { CARD_W, CARD_H } from '../../components/MementoCard';
+import MementoDetailSheet from '../../components/MementoDetailSheet';
+import { deleteMemento, moveMementos } from '../../lib/mementos';
 import styles from './Board.module.css';
 
 const CANVAS_W = 3200;
@@ -8,9 +10,37 @@ const MIN_SCALE = 0.18;
 const MAX_SCALE = 2.0;
 const INITIAL_SCALE = 0.38;
 
-export default function Board({ mementos, partners, partnershipLabel, lastAddedId }) {
+export default function Board({
+  mementos,
+  partners,
+  partnershipLabel,
+  lastAddedId,
+  currentUserProfile,
+  onOpenSettings,
+  onMementoSaved,
+  onMementoRemoved,
+  onMementoRestored,
+  onArrangeModeChange,
+}) {
   const [flippedId, setFlippedId] = useState(null);
   const [enteringId, setEnteringId] = useState(null);
+  const [detailId, setDetailId] = useState(null);
+  // Pending delete: { memento, timer }. While this is set, the pin is
+  // hidden locally but not yet deleted from Supabase.
+  const [pendingDelete, setPendingDelete] = useState(null);
+
+  // Arrange (drag-to-rearrange) mode. localEdits keys are memento ids
+  // whose positions have been changed in this edit session. On Done the
+  // batch is sent to move_mementos; on Cancel the map is just cleared.
+  const [arrangeMode, setArrangeMode] = useState(false);
+  // localEdits[id] = { pos_x?, pos_y?, rotation? }. Each field is only
+  // present once the user has touched it in the current edit session.
+  const [localEdits, setLocalEdits] = useState({});
+  const [savingArrange, setSavingArrange] = useState(false);
+  const [draggingId, setDraggingId] = useState(null);
+  const [selectedId, setSelectedId] = useState(null);
+  const draggingRef = useRef(null);
+  const resizingRef = useRef(null);
 
   const canvasRef = useRef(null);
   const viewportRef = useRef(null);
@@ -18,6 +48,7 @@ export default function Board({ mementos, partners, partnershipLabel, lastAddedI
   const ptrs = useRef(new Map());
   const pinchDist = useRef(null);
   const moved = useRef(false);
+  const hadMulti = useRef(false);
   const ptrStart = useRef({ x: 0, y: 0 });
 
   const applyTx = useCallback(() => {
@@ -73,13 +104,85 @@ export default function Board({ mementos, partners, partnershipLabel, lastAddedI
 
   const onPtrDown = useCallback((e) => {
     ptrs.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
-    moved.current = false;
-    ptrStart.current = { x: e.clientX, y: e.clientY };
+    if (ptrs.current.size === 1) {
+      moved.current = false;
+      hadMulti.current = false;
+      ptrStart.current = { x: e.clientX, y: e.clientY };
+
+      // In arrange mode, a single finger that lands on a card grabs it
+      // for dragging. Otherwise (empty space) it falls through to a pan.
+      if (arrangeMode) {
+        // Resize handle wins over card body (it's a child of the card).
+        const handleEl = e.target.closest('[data-resize-handle]');
+        if (handleEl) {
+          const id = handleEl.dataset.resizeHandle;
+          const m = mementos.find((x) => x.id === id);
+          if (m) {
+            const edit = localEdits[id] ?? {};
+            const posX = edit.pos_x ?? m.pos_x;
+            const posY = edit.pos_y ?? m.pos_y;
+            const scaleX = edit.scale ?? m.scale ?? 1;
+            const scaleY = edit.scale_y ?? m.scale_y ?? 1;
+            const rotDeg = edit.rotation ?? m.rotation ?? 0;
+            const centerScreenX = tx.current.x + posX * CANVAS_W * tx.current.s;
+            const centerScreenY = tx.current.y + posY * CANVAS_H * tx.current.s;
+            const dx0 = e.clientX - centerScreenX;
+            const dy0 = e.clientY - centerScreenY;
+            // Rotate the pointer offset into the card's local frame so x/y
+            // axes line up with card width/height regardless of rotation.
+            const rad = (rotDeg * Math.PI) / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            const dx0Local = dx0 * cos + dy0 * sin;
+            const dy0Local = -dx0 * sin + dy0 * cos;
+            const startDist = Math.max(8, Math.hypot(dx0, dy0));
+            resizingRef.current = {
+              id,
+              uniform: m.type !== 'note', // notes resize per-axis; others uniform
+              rotRad: rad,
+              centerScreenX,
+              centerScreenY,
+              startDist,
+              startDxLocal: Math.max(8, Math.abs(dx0Local)) * Math.sign(dx0Local || 1),
+              startDyLocal: Math.max(8, Math.abs(dy0Local)) * Math.sign(dy0Local || 1),
+              startScaleX: scaleX,
+              startScaleY: scaleY,
+            };
+          }
+        } else {
+          const cardEl = e.target.closest('[data-card-id]');
+          if (cardEl) {
+            const id = cardEl.dataset.cardId;
+            const m = mementos.find((x) => x.id === id);
+            if (m) {
+              const start = localEdits[id] ?? { pos_x: m.pos_x, pos_y: m.pos_y };
+              draggingRef.current = {
+                id,
+                startScreenX: e.clientX,
+                startScreenY: e.clientY,
+                startPosX: start.pos_x,
+                startPosY: start.pos_y,
+              };
+              setDraggingId(id);
+            }
+          }
+        }
+      }
+    } else {
+      // Any second finger landing means this gesture is no longer a tap,
+      // and any in-flight card interaction is abandoned in favor of pinch/zoom.
+      hadMulti.current = true;
+      if (draggingRef.current) {
+        draggingRef.current = null;
+        setDraggingId(null);
+      }
+      resizingRef.current = null;
+    }
     if (ptrs.current.size === 2) {
       const [a, b] = [...ptrs.current.values()];
       pinchDist.current = Math.hypot(a.x - b.x, a.y - b.y);
     }
-  }, []);
+  }, [arrangeMode, mementos, localEdits]);
 
   const onPtrMove = useCallback((e) => {
     if (!ptrs.current.has(e.pointerId)) return;
@@ -89,6 +192,60 @@ export default function Board({ mementos, partners, partnershipLabel, lastAddedI
     const dy = curr.y - prev.y;
     if (Math.hypot(curr.x - ptrStart.current.x, curr.y - ptrStart.current.y) > 6) {
       moved.current = true;
+    }
+
+    // Resize: pointer's distance from card center vs. starting distance
+    // gives the scale ratio. Center stays put; only scale(s) change.
+    if (resizingRef.current && ptrs.current.size === 1) {
+      const r = resizingRef.current;
+      const dxc = curr.x - r.centerScreenX;
+      const dyc = curr.y - r.centerScreenY;
+      if (r.uniform) {
+        const dist = Math.hypot(dxc, dyc);
+        const ratio = dist / r.startDist;
+        const newScale = Math.max(0.4, Math.min(2.5, r.startScaleX * ratio));
+        setLocalEdits((prev) => ({
+          ...prev,
+          [r.id]: { ...(prev[r.id] ?? {}), scale: newScale, scale_y: newScale },
+        }));
+      } else {
+        // Note: independent X / Y scale in the card's local (post-rotation)
+        // frame, so dragging right widens, dragging down lengthens.
+        const cos = Math.cos(r.rotRad);
+        const sin = Math.sin(r.rotRad);
+        const dxLocal = dxc * cos + dyc * sin;
+        const dyLocal = -dxc * sin + dyc * cos;
+        const ratioX = dxLocal / r.startDxLocal;
+        const ratioY = dyLocal / r.startDyLocal;
+        const newScaleX = Math.max(0.5, Math.min(3, r.startScaleX * ratioX));
+        const newScaleY = Math.max(0.5, Math.min(3, r.startScaleY * ratioY));
+        setLocalEdits((prev) => ({
+          ...prev,
+          [r.id]: { ...(prev[r.id] ?? {}), scale: newScaleX, scale_y: newScaleY },
+        }));
+      }
+      ptrs.current.set(e.pointerId, curr);
+      return;
+    }
+
+    // Drag the grabbed card in arrange mode. Convert screen delta into
+    // normalized canvas coords by undoing the current zoom and canvas size.
+    if (draggingRef.current && ptrs.current.size === 1) {
+      const d = draggingRef.current;
+      const dxScreen = curr.x - d.startScreenX;
+      const dyScreen = curr.y - d.startScreenY;
+      const scale = tx.current.s;
+      const nx = d.startPosX + (dxScreen / scale) / CANVAS_W;
+      const ny = d.startPosY + (dyScreen / scale) / CANVAS_H;
+      // Clamp to the visible canvas so cards can't be dragged off-board.
+      const clampedX = Math.max(0.02, Math.min(0.98, nx));
+      const clampedY = Math.max(0.02, Math.min(0.98, ny));
+      setLocalEdits((prevMap) => ({
+        ...prevMap,
+        [d.id]: { ...(prevMap[d.id] ?? {}), pos_x: clampedX, pos_y: clampedY },
+      }));
+      ptrs.current.set(e.pointerId, curr);
+      return;
     }
 
     if (ptrs.current.size === 1) {
@@ -114,11 +271,39 @@ export default function Board({ mementos, partners, partnershipLabel, lastAddedI
   }, [applyTx]);
 
   const onPtrUp = useCallback((e) => {
+    const wasLast = ptrs.current.size === 1;
     const wasMoved = moved.current;
+    const wasMulti = hadMulti.current;
+    const draggedId = draggingRef.current?.id ?? null;
+    const resizingId = resizingRef.current?.id ?? null;
     ptrs.current.delete(e.pointerId);
     pinchDist.current = null;
-    if (ptrs.current.size === 0) moved.current = false;
-    if (!wasMoved) {
+    if (ptrs.current.size === 0) {
+      moved.current = false;
+      hadMulti.current = false;
+      if (draggingRef.current) {
+        draggingRef.current = null;
+        setDraggingId(null);
+      }
+      resizingRef.current = null;
+    }
+
+    if (arrangeMode) {
+      // Resize gesture released — keep the card selected and don't treat
+      // as a tap.
+      if (resizingId) return;
+      // In arrange mode, a non-moved single-finger gesture is a tap:
+      // on a card → select it; on empty space → deselect.
+      if (wasLast && !wasMulti && !wasMoved) {
+        if (draggedId) setSelectedId(draggedId);
+        else setSelectedId(null);
+      }
+      return;
+    }
+
+    // Tap-to-flip: only when this was the final pointer up, the gesture
+    // never had a second finger, and no movement happened.
+    if (wasLast && !wasMulti && !wasMoved) {
       const el = e.target.closest('[data-card-id]');
       if (el) {
         const id = el.dataset.cardId;
@@ -127,7 +312,7 @@ export default function Board({ mementos, partners, partnershipLabel, lastAddedI
         setFlippedId(null);
       }
     }
-  }, []);
+  }, [arrangeMode]);
 
   // Mouse wheel zoom — passive: false because we preventDefault.
   useEffect(() => {
@@ -149,18 +334,184 @@ export default function Board({ mementos, partners, partnershipLabel, lastAddedI
 
   const authorMap = Object.fromEntries(partners.map((p) => [p.id, p]));
 
+  // Snapshot the memento, remove it from local state, and arm a 5-second
+  // timer to commit the delete. Undo cancels the timer and restores the pin.
+  const requestDelete = useCallback((id) => {
+    const m = mementos.find((x) => x.id === id);
+    if (!m) return;
+    // If another delete is already pending, commit it immediately so we
+    // never have two in flight.
+    if (pendingDelete) {
+      clearTimeout(pendingDelete.timer);
+      deleteMemento(pendingDelete.memento.id).catch((err) =>
+        console.error('deferred delete', err),
+      );
+    }
+    onMementoRemoved?.(id);
+    const timer = setTimeout(async () => {
+      try {
+        await deleteMemento(id);
+      } catch (err) {
+        console.error('delete memento', err);
+        onMementoRestored?.(m);
+      } finally {
+        setPendingDelete((curr) => (curr?.memento.id === id ? null : curr));
+      }
+    }, 5000);
+    setPendingDelete({ memento: m, timer });
+  }, [mementos, pendingDelete, onMementoRemoved, onMementoRestored]);
+
+  const undoDelete = useCallback(() => {
+    if (!pendingDelete) return;
+    clearTimeout(pendingDelete.timer);
+    onMementoRestored?.(pendingDelete.memento);
+    setPendingDelete(null);
+  }, [pendingDelete, onMementoRestored]);
+
+  // Commit any pending delete on unmount so the user's intent isn't lost.
+  useEffect(() => {
+    return () => {
+      if (pendingDelete) {
+        clearTimeout(pendingDelete.timer);
+        deleteMemento(pendingDelete.memento.id).catch((err) =>
+          console.error('unmount delete', err),
+        );
+      }
+    };
+  }, [pendingDelete]);
+
+  const visibleMementos = pendingDelete
+    ? mementos.filter((m) => m.id !== pendingDelete.memento.id)
+    : mementos;
+
+  useEffect(() => {
+    onArrangeModeChange?.(arrangeMode);
+  }, [arrangeMode, onArrangeModeChange]);
+
+  const enterArrange = () => {
+    setFlippedId(null);
+    setSelectedId(null);
+    setLocalEdits({});
+    setArrangeMode(true);
+  };
+
+  const cancelArrange = () => {
+    setLocalEdits({});
+    setSelectedId(null);
+    setArrangeMode(false);
+  };
+
+  const doneArrange = async () => {
+    if (savingArrange) return;
+    const moves = Object.entries(localEdits).map(([id, edit]) => {
+      const orig = mementos.find((x) => x.id === id);
+      return {
+        id,
+        pos_x: edit.pos_x ?? orig?.pos_x ?? 0.5,
+        pos_y: edit.pos_y ?? orig?.pos_y ?? 0.5,
+        // rotation + scale + scale_y are optional — RPC coalesces when absent.
+        ...(edit.rotation !== undefined ? { rotation: edit.rotation } : {}),
+        ...(edit.scale !== undefined ? { scale: edit.scale } : {}),
+        ...(edit.scale_y !== undefined ? { scale_y: edit.scale_y } : {}),
+      };
+    });
+    if (moves.length === 0) {
+      setSelectedId(null);
+      setArrangeMode(false);
+      return;
+    }
+    setSavingArrange(true);
+    try {
+      await moveMementos(moves);
+      moves.forEach((m) =>
+        onMementoSaved?.({
+          id: m.id,
+          pos_x: m.pos_x,
+          pos_y: m.pos_y,
+          ...(m.rotation !== undefined ? { rotation: m.rotation } : {}),
+          ...(m.scale !== undefined ? { scale: m.scale } : {}),
+          ...(m.scale_y !== undefined ? { scale_y: m.scale_y } : {}),
+        }),
+      );
+      setLocalEdits({});
+      setSelectedId(null);
+      setArrangeMode(false);
+    } catch (err) {
+      console.error('move_mementos', err);
+    } finally {
+      setSavingArrange(false);
+    }
+  };
+
+  const setRotation = (id, deg) => {
+    setLocalEdits((prev) => ({
+      ...prev,
+      [id]: { ...(prev[id] ?? {}), rotation: deg },
+    }));
+  };
+
+  const selectedMemento = selectedId ? mementos.find((m) => m.id === selectedId) : null;
+  const selectedRotation = selectedMemento
+    ? (localEdits[selectedId]?.rotation ?? selectedMemento.rotation)
+    : 0;
+
   return (
     <>
-      <div className={styles.header}>
-        <div className={styles.title}>{partnershipLabel}</div>
-        <div className={styles.count}>
-          {mementos.length} {mementos.length === 1 ? 'memory' : 'memories'}
-        </div>
+      <div className={`${styles.header} ${arrangeMode ? styles.headerArrange : ''}`}>
+        {arrangeMode ? (
+          <>
+            <button
+              className={styles.headerCancel}
+              onClick={cancelArrange}
+              disabled={savingArrange}
+            >
+              Cancel
+            </button>
+            <div className={styles.headerArrangeTitle}>Drag pins to rearrange</div>
+            <button
+              className={styles.headerDone}
+              onClick={doneArrange}
+              disabled={savingArrange}
+            >
+              {savingArrange ? 'Saving…' : 'Done'}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className={styles.title}>{partnershipLabel}</div>
+            <div className={styles.headerRight}>
+              <div className={styles.count}>
+                {mementos.length} {mementos.length === 1 ? 'memory' : 'memories'}
+              </div>
+              <button
+                className={styles.arrangeBtn}
+                onClick={enterArrange}
+                disabled={mementos.length === 0}
+                aria-label="Arrange pins"
+                title="Arrange pins"
+              >
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M5 9l-2 3 2 3M19 9l2 3-2 3M9 5l3-2 3 2M9 19l3 2 3-2" />
+                </svg>
+              </button>
+              <button
+                className={styles.meAvatar}
+                onClick={onOpenSettings}
+                style={{ background: currentUserProfile?.accent_color || '#9C5E4A' }}
+                aria-label="Settings"
+              >
+                {currentUserProfile?.photo_url
+                  ? <img src={currentUserProfile.photo_url} alt="" />
+                  : (currentUserProfile?.name?.[0] || '?').toUpperCase()}
+              </button>
+            </div>
+          </>
+        )}
       </div>
 
       <div
         ref={viewportRef}
-        className={styles.viewport}
+        className={`${styles.viewport} ${arrangeMode ? styles.viewportArrange : ''}`}
         onPointerDown={onPtrDown}
         onPointerMove={onPtrMove}
         onPointerUp={onPtrUp}
@@ -171,25 +522,89 @@ export default function Board({ mementos, partners, partnershipLabel, lastAddedI
           className={styles.canvas}
           style={{ width: CANVAS_W, height: CANVAS_H }}
         >
-          {mementos.length === 0 && (
+          {visibleMementos.length === 0 && !pendingDelete && (
             <div className={styles.empty} style={{ left: CANVAS_W / 2, top: CANVAS_H / 2 }}>
               <div className={styles.emptyTitle}>Your board is ready.</div>
               <div className={styles.emptySub}>Tap + to pin your first memory</div>
             </div>
           )}
-          {mementos.map((m) => (
-            <MementoCard
-              key={m.id}
-              memento={m}
-              author={authorMap[m.author_id]}
-              flipped={flippedId === m.id}
-              entering={enteringId === m.id}
-              x={m.pos_x * CANVAS_W}
-              y={m.pos_y * CANVAS_H}
-            />
-          ))}
+          {visibleMementos.map((m) => {
+            const lp = localEdits[m.id];
+            const px = (lp?.pos_x ?? m.pos_x) * CANVAS_W;
+            const py = (lp?.pos_y ?? m.pos_y) * CANVAS_H;
+            const rot = lp?.rotation ?? m.rotation;
+            const sclX = lp?.scale ?? m.scale ?? 1;
+            const sclY = lp?.scale_y ?? m.scale_y ?? 1;
+            return (
+              <MementoCard
+                key={m.id}
+                memento={m}
+                author={authorMap[m.author_id]}
+                flipped={flippedId === m.id}
+                entering={enteringId === m.id}
+                x={px}
+                y={py}
+                rotationOverride={rot}
+                scaleOverride={sclX}
+                scaleYOverride={sclY}
+                onOpenDetail={setDetailId}
+                arrangeMode={arrangeMode}
+                dragging={draggingId === m.id}
+                selected={selectedId === m.id}
+              />
+            );
+          })}
         </div>
       </div>
+
+      {detailId && (
+        <MementoDetailSheet
+          memento={mementos.find((m) => m.id === detailId)}
+          author={authorMap[mementos.find((m) => m.id === detailId)?.author_id]}
+          currentUserId={currentUserProfile?.id}
+          partnershipId={currentUserProfile?.partnership_id}
+          onClose={() => setDetailId(null)}
+          onSaved={(updated) => {
+            onMementoSaved?.(updated);
+            setDetailId(null);
+          }}
+          onDeleteRequested={(id) => {
+            setDetailId(null);
+            requestDelete(id);
+          }}
+        />
+      )}
+
+      {pendingDelete && (
+        <div className={styles.undoBar} role="status">
+          <span>Pin removed</span>
+          <button onClick={undoDelete}>Undo</button>
+        </div>
+      )}
+
+      {arrangeMode && selectedMemento && (
+        <div className={styles.rotateBar}>
+          <div className={styles.rotateLabel}>Rotate</div>
+          <input
+            type="range"
+            min="-45"
+            max="45"
+            step="1"
+            value={selectedRotation}
+            onChange={(e) => setRotation(selectedId, Number(e.target.value))}
+            className={styles.rotateSlider}
+          />
+          <div className={styles.rotateValue}>{Math.round(selectedRotation)}°</div>
+          <button
+            className={styles.rotateReset}
+            onClick={() => setRotation(selectedId, 0)}
+            aria-label="Reset rotation"
+            title="Reset rotation"
+          >
+            Reset
+          </button>
+        </div>
+      )}
     </>
   );
 }

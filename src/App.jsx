@@ -67,7 +67,7 @@ export default function App() {
           element={
             !profile || !profile.partnership_id
               ? <Onboarding user={user} profile={profile} onComplete={refreshProfile} />
-              : <AppShell user={user} profile={profile} />
+              : <AppShell user={user} profile={profile} onProfileChange={refreshProfile} />
           }
         />
       </Routes>

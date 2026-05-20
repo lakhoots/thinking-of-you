@@ -4,17 +4,20 @@ import { usePartnership } from '../../hooks/usePartnership';
 import { useMementos } from '../../hooks/useMementos';
 import NavBar from '../../components/NavBar';
 import AddMementoForm from '../../components/AddMementoForm';
+import SettingsSheet from '../../components/SettingsSheet';
 import Board from './Board';
 import Sparks from './Sparks';
 import shellStyles from './AppShell.module.css';
 
-export default function AppShell({ user, profile }) {
+export default function AppShell({ user, profile, onProfileChange }) {
   const [tab, setTab] = useState('board');
   const [showAdd, setShowAdd] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [lastAddedId, setLastAddedId] = useState(null);
+  const [boardArranging, setBoardArranging] = useState(false);
 
-  const { partnership, partners } = usePartnership(profile.partnership_id);
-  const { mementos, addLocal } = useMementos(profile.partnership_id);
+  const { partnership, partners, refresh: refreshPartnership } = usePartnership(profile.partnership_id);
+  const { mementos, addLocal, updateLocal, removeLocal } = useMementos(profile.partnership_id);
 
   const partnerJoined = !!(partnership?.partner_a_id && partnership?.partner_b_id);
 
@@ -29,6 +32,8 @@ export default function AppShell({ user, profile }) {
     setShowAdd(false);
   };
 
+  const openSettings = () => setShowSettings(true);
+
   return (
     <>
       {tab === 'board' && (
@@ -37,15 +42,28 @@ export default function AppShell({ user, profile }) {
           partners={partners}
           partnershipLabel={partnership?.label ?? ''}
           lastAddedId={lastAddedId}
+          currentUserProfile={profile}
+          onOpenSettings={openSettings}
+          onMementoSaved={updateLocal}
+          onMementoRemoved={removeLocal}
+          onMementoRestored={addLocal}
+          onArrangeModeChange={setBoardArranging}
         />
       )}
-      {tab === 'sparks' && <Sparks />}
+      {tab === 'sparks' && (
+        <Sparks
+          currentUserProfile={profile}
+          onOpenSettings={openSettings}
+        />
+      )}
 
-      <NavBar
-        tab={tab}
-        onTab={setTab}
-        onAdd={() => setShowAdd(true)}
-      />
+      {!boardArranging && (
+        <NavBar
+          tab={tab}
+          onTab={setTab}
+          onAdd={() => setShowAdd(true)}
+        />
+      )}
 
       {showAdd && (
         <AddMementoForm
@@ -54,6 +72,17 @@ export default function AppShell({ user, profile }) {
           existing={mementos}
           onCreated={onCreated}
           onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {showSettings && partnership && (
+        <SettingsSheet
+          profile={profile}
+          partnership={partnership}
+          partners={partners}
+          onProfileUpdated={onProfileChange}
+          onPartnershipUpdated={refreshPartnership}
+          onClose={() => setShowSettings(false)}
         />
       )}
     </>

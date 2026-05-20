@@ -26,6 +26,184 @@
   letter-spacing: 0.06em;
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.meAvatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  overflow: hidden;
+  font-family: var(--sans);
+  flex-shrink: 0;
+  transition: transform 0.15s, box-shadow 0.15s;
+}
+
+.meAvatar:hover {
+  transform: scale(1.06);
+  box-shadow: 0 2px 8px rgba(26, 18, 8, 0.18);
+}
+
+.meAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.arrangeBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: transparent;
+  border: 1px solid var(--border-strong);
+  color: var(--ink);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.arrangeBtn:hover { background: rgba(26, 18, 8, 0.05); }
+.arrangeBtn:disabled { opacity: 0.35; cursor: default; }
+
+.headerArrange {
+  background: var(--ink);
+  border-bottom-color: transparent;
+}
+
+.headerArrange .headerArrangeTitle {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 15px;
+  color: var(--bg-card);
+  letter-spacing: 0.02em;
+}
+
+.headerCancel,
+.headerDone {
+  background: none;
+  border: none;
+  color: var(--bg-card);
+  font-size: 14px;
+  font-weight: 500;
+  padding: 6px 4px;
+  cursor: pointer;
+  letter-spacing: 0.02em;
+}
+
+.headerCancel { color: rgba(250, 246, 236, 0.7); }
+.headerDone { color: #F2D6A8; font-weight: 600; }
+
+.headerCancel:disabled,
+.headerDone:disabled { opacity: 0.45; cursor: default; }
+
+.viewportArrange {
+  background: #E6D7B8;
+  background-image: radial-gradient(rgba(26, 18, 8, 0.07) 1px, transparent 1px);
+  background-size: 18px 18px;
+  bottom: 0; /* NavBar is hidden in arrange mode */
+}
+
+.rotateBar {
+  position: fixed;
+  bottom: 24px; /* NavBar is hidden in arrange mode */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26, 18, 8, 0.94);
+  color: #FAF6EC;
+  padding: 10px 14px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  z-index: 220;
+  box-shadow: 0 10px 26px rgba(26, 18, 8, 0.32);
+  animation: undoIn 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  width: calc(100% - 32px);
+  max-width: 420px;
+}
+
+.rotateLabel {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(250, 246, 236, 0.6);
+}
+
+.rotateSlider {
+  flex: 1;
+  height: 24px;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  cursor: pointer;
+}
+
+.rotateSlider::-webkit-slider-runnable-track {
+  height: 3px;
+  background: rgba(250, 246, 236, 0.22);
+  border-radius: 2px;
+}
+
+.rotateSlider::-moz-range-track {
+  height: 3px;
+  background: rgba(250, 246, 236, 0.22);
+  border-radius: 2px;
+}
+
+.rotateSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  background: #F2D6A8;
+  border-radius: 50%;
+  margin-top: -8px;
+  border: none;
+}
+
+.rotateSlider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  background: #F2D6A8;
+  border-radius: 50%;
+  border: none;
+}
+
+.rotateValue {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: #F2D6A8;
+  min-width: 34px;
+  text-align: right;
+}
+
+.rotateReset {
+  background: none;
+  border: 1px solid rgba(250, 246, 236, 0.22);
+  color: rgba(250, 246, 236, 0.85);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.rotateReset:hover { background: rgba(255, 255, 255, 0.08); }
+
 .viewport {
   position: fixed;
   top: 52px;
@@ -67,3 +245,40 @@
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
+
+.undoBar {
+  position: fixed;
+  bottom: 88px; /* sit above the nav bar */
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(26, 18, 8, 0.92);
+  color: #FAF6EC;
+  padding: 11px 14px 11px 18px;
+  border-radius: 999px;
+  font-size: 13px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  z-index: 220;
+  box-shadow: 0 8px 24px rgba(26, 18, 8, 0.3);
+  animation: undoIn 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes undoIn {
+  from { transform: translate(-50%, 12px); opacity: 0; }
+  to   { transform: translate(-50%, 0);     opacity: 1; }
+}
+
+.undoBar button {
+  background: none;
+  border: none;
+  color: #F2D6A8;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.undoBar button:hover { background: rgba(255, 255, 255, 0.08); }

@@ -8,23 +8,35 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
   const [date, setDate] = useState(todayStr());
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
-  const [photoFile, setPhotoFile] = useState(null);
-  const [photoPreview, setPhotoPreview] = useState(null);
+  const [photoFiles, setPhotoFiles] = useState([]);
+  const [photoPreviews, setPhotoPreviews] = useState([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fileRef = useRef();
 
   const onFile = (e) => {
-    const f = e.target.files?.[0];
-    if (!f) return;
-    setPhotoFile(f);
-    setPhotoPreview(URL.createObjectURL(f));
+    const fs = Array.from(e.target.files ?? []);
+    if (!fs.length) return;
+    setPhotoFiles((prev) => [...prev, ...fs]);
+    setPhotoPreviews((prev) => [...prev, ...fs.map((f) => URL.createObjectURL(f))]);
+    // Reset input so the same file can be picked again if needed.
+    e.target.value = '';
+  };
+
+  const removePhoto = (i) => {
+    setPhotoFiles((prev) => prev.filter((_, idx) => idx !== i));
+    setPhotoPreviews((prev) => {
+      const next = prev.filter((_, idx) => idx !== i);
+      // Revoke the URL we created so we don't leak it.
+      URL.revokeObjectURL(prev[i]);
+      return next;
+    });
   };
 
   const canSubmit =
     type && date &&
     (type === 'note' ? note.trim().length > 0 :
-     type === 'photo' ? !!photoFile : false);
+     type === 'photo' ? photoFiles.length > 0 : false);
 
   const submit = async () => {
     if (!canSubmit || busy) return;
@@ -38,7 +50,7 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
         date,
         title: title.trim(),
         note: note.trim(),
-        photoFile,
+        photoFile: photoFiles,
         existing,
       });
       onCreated(m);
@@ -77,16 +89,43 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
 
             {type === 'photo' && (
               <div className={styles.field}>
-                <label className={styles.label}>Photo</label>
-                <div className={styles.upload} onClick={() => fileRef.current?.click()}>
-                  {photoPreview ? <img src={photoPreview} alt="" /> : (
-                    <>
-                      <div className={styles.uploadIcon}>📷</div>
-                      <div className={styles.uploadHint}>Tap to choose photo</div>
-                    </>
-                  )}
-                </div>
-                <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={onFile} />
+                <label className={styles.label}>
+                  Photos {photoFiles.length > 1 && <span className={styles.optional}>{photoFiles.length} in stack</span>}
+                </label>
+                {photoPreviews.length === 0 ? (
+                  <div className={styles.upload} onClick={() => fileRef.current?.click()}>
+                    <div className={styles.uploadIcon}>📷</div>
+                    <div className={styles.uploadHint}>Tap to choose photos</div>
+                  </div>
+                ) : (
+                  <div className={styles.previewStrip}>
+                    {photoPreviews.map((src, i) => (
+                      <div key={src} className={styles.previewItem}>
+                        <img src={src} alt="" />
+                        <button
+                          type="button"
+                          className={styles.previewRemove}
+                          onClick={() => removePhoto(i)}
+                          aria-label="Remove photo"
+                        >×</button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className={styles.previewAdd}
+                      onClick={() => fileRef.current?.click()}
+                      aria-label="Add another photo"
+                    >+</button>
+                  </div>
+                )}
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={onFile}
+                />
               </div>
             )}
 

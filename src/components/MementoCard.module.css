@@ -1,7 +1,88 @@
 .wrap {
   position: absolute;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-user-drag: none;
 }
+
+.wrap img {
+  -webkit-user-drag: none;
+  user-select: none;
+  pointer-events: none;
+}
+
+.arranging .front,
+.arranging .back {
+  box-shadow: 0 6px 18px rgba(26, 18, 8, 0.18), 0 1px 3px rgba(26, 18, 8, 0.08);
+  cursor: grab;
+}
+
+.arranging .inner {
+  animation: wobble 1.5s ease-in-out infinite;
+}
+
+@keyframes wobble {
+  0%, 100% { transform: rotate(-0.6deg); }
+  50%      { transform: rotate(0.6deg); }
+}
+
+.dragging .front,
+.dragging .back {
+  box-shadow: 0 14px 30px rgba(26, 18, 8, 0.28), 0 4px 8px rgba(26, 18, 8, 0.14);
+  cursor: grabbing;
+}
+
+.dragging .inner {
+  animation: none;
+  transform: scale(1.04);
+}
+
+.selected .front,
+.selected .back {
+  box-shadow: 0 0 0 2px #B8955A, 0 10px 26px rgba(26, 18, 8, 0.24);
+}
+
+.selected .inner {
+  animation: none;
+}
+
+.resizeHandle {
+  position: absolute;
+  right: -10px;
+  bottom: -10px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: #B8955A;
+  color: #FAF6EC;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(26, 18, 8, 0.32);
+  cursor: nwse-resize;
+  z-index: 5;
+  touch-action: none;
+}
+
+/* Borderless rendering for transparent-PNG photos — the photo IS the
+   pin, no cream frame around it. The back face stays normal so notes
+   still render against the cream card-back. */
+.borderless .front {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.borderless .front .img {
+  background: transparent;
+}
+
+.borderless .front .img img {
+  object-fit: contain;
+  filter: drop-shadow(0 3px 6px rgba(26, 18, 8, 0.24));
+}
+
 
 .perspective {
   width: 100%;
@@ -68,6 +149,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  overflow: hidden;
 }
 
 .noteBody p {
@@ -77,10 +159,8 @@
   color: var(--ink);
   line-height: 1.55;
   text-align: center;
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
   overflow: hidden;
+  max-height: 100%;
 }
 
 .emojiBody {
@@ -118,6 +198,59 @@
   box-shadow: var(--shadow-card);
 }
 
+.expand {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: rgba(26, 18, 8, 0.06);
+  border: none;
+  color: rgba(44, 26, 10, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
+.expand:hover { background: rgba(26, 18, 8, 0.13); color: var(--ink); }
+
+.backThumbs {
+  display: flex;
+  gap: 3px;
+  margin-bottom: 8px;
+  padding-right: 26px; /* leave room for the expand button */
+}
+
+.backThumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 3px;
+  overflow: hidden;
+  background: var(--bg-raised);
+  border: 1px solid rgba(26, 18, 8, 0.08);
+  flex-shrink: 0;
+}
+
+.backThumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.backThumbMore {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 600;
+  color: rgba(44, 26, 10, 0.55);
+  background: rgba(26, 18, 8, 0.06);
+}
+
 .backNote {
   font-family: var(--italic);
   font-style: italic;
@@ -127,9 +260,6 @@
   line-height: 1.6;
   flex: 1;
   overflow: hidden;
-  display: -webkit-box;
-  -webkit-line-clamp: 5;
-  -webkit-box-orient: vertical;
 }
 
 .backNote.empty {

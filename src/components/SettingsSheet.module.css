@@ -1,0 +1,247 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(26, 18, 8, 0.42);
+  z-index: 200;
+  display: flex;
+  align-items: flex-end;
+}
+
+.sheet {
+  background: var(--bg);
+  border-radius: 22px 22px 0 0;
+  padding: 16px 20px 32px;
+  width: 100%;
+  max-height: 92vh;
+  overflow-y: auto;
+  animation: sheetUp 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes sheetUp {
+  from { transform: translateY(100%); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.handle {
+  width: 34px;
+  height: 4px;
+  background: var(--border-strong);
+  border-radius: 2px;
+  margin: 0 auto 18px;
+}
+
+.title {
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 21px;
+  color: var(--ink);
+  margin-bottom: 22px;
+}
+
+.section {
+  margin-bottom: 28px;
+  padding-bottom: 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.section:last-of-type {
+  border-bottom: none;
+  margin-bottom: 12px;
+}
+
+.sectionLabel {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 16px;
+}
+
+.field {
+  margin-bottom: 14px;
+}
+
+.label {
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  margin-bottom: 7px;
+  display: block;
+}
+
+.input {
+  width: 100%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  padding: 12px 13px;
+  font-family: var(--sans);
+  font-size: 14px;
+  font-weight: 300;
+  color: var(--ink);
+  outline: none;
+}
+
+.input:focus { border-color: rgba(26, 18, 8, 0.38); }
+.input::placeholder { color: var(--ink-muted); }
+
+.avatarRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.avatar {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: white;
+  font-weight: 500;
+  flex-shrink: 0;
+  overflow: hidden;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: border-color 0.15s;
+}
+
+.avatar:hover { border-color: var(--border-strong); }
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.avatarHint {
+  font-size: 12px;
+  color: var(--ink-dim);
+  cursor: pointer;
+  background: none;
+  border: none;
+  text-decoration: underline;
+  padding: 0;
+  font-family: inherit;
+}
+
+.colors {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.colorDot {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  border: 2.5px solid transparent;
+  transition: transform 0.15s;
+  position: relative;
+}
+
+.colorDot.on {
+  border-color: var(--ink);
+  transform: scale(1.15);
+}
+
+.partnerMark {
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bg);
+  border: 1.5px solid var(--ink-muted);
+}
+
+.warn {
+  font-size: 11px;
+  color: var(--ink-dim);
+  font-style: italic;
+  font-family: var(--italic);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+.save {
+  width: 100%;
+  background: var(--chain);
+  color: rgba(240, 230, 208, 0.95);
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  margin-top: 10px;
+  transition: opacity 0.2s;
+}
+
+.save:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.error {
+  font-size: 12px;
+  color: #9C5E4A;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.inviteBox {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  padding: 12px 13px;
+  font-size: 12px;
+  font-weight: 300;
+  color: var(--ink);
+  word-break: break-all;
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.copyBtn {
+  width: 100%;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 9px;
+  padding: 12px;
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.04em;
+  color: var(--ink);
+  cursor: pointer;
+}
+
+.note {
+  font-size: 11px;
+  color: var(--ink-dim);
+  font-style: italic;
+  font-family: var(--italic);
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+.signOut {
+  background: none;
+  border: none;
+  font-size: 12px;
+  color: var(--ink-muted);
+  text-decoration: underline;
+  cursor: pointer;
+  font-family: inherit;
+  padding: 8px;
+  margin: 8px auto 0;
+  display: block;
+}
