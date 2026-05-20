@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Route, Routes, useNavigate } from 'react-router-dom';
 import { useAuth } from './hooks/useAuth';
 import { useProfile } from './hooks/useProfile';
 import SignIn from './pages/SignIn';
@@ -15,7 +15,7 @@ function LoadingScreen() {
       fontFamily: "'Playfair Display', serif", fontStyle: 'italic',
       fontSize: 17, color: 'rgba(26,18,8,0.3)',
     }}>
-      loading…
+      warming up…
     </div>
   );
 }

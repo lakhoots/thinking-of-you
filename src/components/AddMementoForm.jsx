@@ -3,17 +3,11 @@ import { createMemento } from '../lib/mementos';
 import { todayStr } from '../lib/format';
 import styles from './AddMementoForm.module.css';
 
-const EMOJIS = [
-  '🌸','🌿','🌊','🏔️','☕','🍜','🌅','🎵','📸','✈️','🌙','⭐','🌻','🍃',
-  '🏙️','🌋','🍣','🥂','🌈','🎞️','💌','🗺️','🌺','🌾','🌐','🕯️','🎭','🧭',
-];
-
 export default function AddMementoForm({ partnershipId, authorId, existing, onCreated, onClose }) {
   const [type, setType] = useState(null);
   const [date, setDate] = useState(todayStr());
   const [title, setTitle] = useState('');
   const [note, setNote] = useState('');
-  const [emoji, setEmoji] = useState('');
   const [photoFile, setPhotoFile] = useState(null);
   const [photoPreview, setPhotoPreview] = useState(null);
   const [busy, setBusy] = useState(false);
@@ -30,7 +24,6 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
   const canSubmit =
     type && date &&
     (type === 'note' ? note.trim().length > 0 :
-     type === 'emoji' ? !!emoji :
      type === 'photo' ? !!photoFile : false);
 
   const submit = async () => {
@@ -45,7 +38,6 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
         date,
         title: title.trim(),
         note: note.trim(),
-        emoji,
         photoFile,
         existing,
       });
@@ -63,8 +55,7 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
         <div className={styles.title}>
           {!type ? 'Pin a memory'
             : type === 'photo' ? 'Add a photo'
-            : type === 'note' ? 'Write a note'
-            : 'Add an emoji'}
+            : 'Write a note'}
         </div>
 
         {!type && (
@@ -76,10 +67,6 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
             <button className={styles.typeBtn} onClick={() => setType('note')}>
               <div className={styles.typeIcon}>✏️</div>
               <div className={styles.typeLbl}>Note</div>
-            </button>
-            <button className={styles.typeBtn} onClick={() => setType('emoji')}>
-              <div className={styles.typeIcon}>✨</div>
-              <div className={styles.typeLbl}>Emoji</div>
             </button>
           </div>
         )}
@@ -113,23 +100,6 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
                   onChange={(e) => setNote(e.target.value)}
                   rows={4}
                 />
-              </div>
-            )}
-
-            {type === 'emoji' && (
-              <div className={styles.field}>
-                <label className={styles.label}>Pick an emoji</label>
-                <div className={styles.emojiGrid}>
-                  {EMOJIS.map((em) => (
-                    <button
-                      key={em}
-                      className={`${styles.emojiOpt} ${emoji === em ? styles.emojiOn : ''}`}
-                      onClick={() => setEmoji(em)}
-                    >
-                      {em}
-                    </button>
-                  ))}
-                </div>
               </div>
             )}
 
