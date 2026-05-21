@@ -2,8 +2,10 @@ import { useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { usePartnership } from '../../hooks/usePartnership';
 import { useMementos } from '../../hooks/useMementos';
+import { useSparks } from '../../hooks/useSparks';
 import NavBar from '../../components/NavBar';
 import AddMementoForm from '../../components/AddMementoForm';
+import AddSparkForm from '../../components/AddSparkForm';
 import SettingsSheet from '../../components/SettingsSheet';
 import Board from './Board';
 import Sparks from './Sparks';
@@ -15,9 +17,16 @@ export default function AppShell({ user, profile, onProfileChange }) {
   const [showSettings, setShowSettings] = useState(false);
   const [lastAddedId, setLastAddedId] = useState(null);
   const [boardArranging, setBoardArranging] = useState(false);
+  const [sparkEditing, setSparkEditing] = useState(false);
 
   const { partnership, partners, refresh: refreshPartnership } = usePartnership(profile.partnership_id);
   const { mementos, addLocal, updateLocal, removeLocal } = useMementos(profile.partnership_id);
+  const {
+    sparks,
+    addLocal: addSparkLocal,
+    updateLocal: updateSparkLocal,
+    removeLocal: removeSparkLocal,
+  } = useSparks(profile.partnership_id);
 
   const partnerJoined = !!(partnership?.partner_a_id && partnership?.partner_b_id);
 
@@ -29,6 +38,11 @@ export default function AppShell({ user, profile, onProfileChange }) {
   const onCreated = (m) => {
     addLocal(m);
     setLastAddedId(m.id);
+    setShowAdd(false);
+  };
+
+  const onSparkCreated = (s) => {
+    addSparkLocal(s);
     setShowAdd(false);
   };
 
@@ -52,12 +66,18 @@ export default function AppShell({ user, profile, onProfileChange }) {
       )}
       {tab === 'sparks' && (
         <Sparks
+          sparks={sparks}
+          partners={partners}
           currentUserProfile={profile}
           onOpenSettings={openSettings}
+          onSparkUpdated={updateSparkLocal}
+          onSparkRemoved={removeSparkLocal}
+          onSparkRestored={addSparkLocal}
+          onEditOpenChange={setSparkEditing}
         />
       )}
 
-      {!boardArranging && (
+      {!boardArranging && !sparkEditing && !(showAdd && tab === 'sparks') && (
         <NavBar
           tab={tab}
           onTab={setTab}
@@ -65,12 +85,21 @@ export default function AppShell({ user, profile, onProfileChange }) {
         />
       )}
 
-      {showAdd && (
+      {showAdd && tab === 'board' && (
         <AddMementoForm
           partnershipId={profile.partnership_id}
           authorId={user.id}
           existing={mementos}
           onCreated={onCreated}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {showAdd && tab === 'sparks' && (
+        <AddSparkForm
+          partnershipId={profile.partnership_id}
+          authorId={user.id}
+          onCreated={onSparkCreated}
           onClose={() => setShowAdd(false)}
         />
       )}
