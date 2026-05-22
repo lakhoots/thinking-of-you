@@ -2,15 +2,33 @@ import { supabase } from './supabase';
 import { compressImageDetailed, extForMime } from './image';
 
 export async function listSparks(partnershipId) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('sparks')
-    .select('*, photos:spark_photos(id, image_url, position)')
+    .select('*, photos:spark_photos(id, image_url, position), comments:spark_comments(id, spark_id, author_id, body, created_at)')
     .eq('partnership_id', partnershipId)
     .order('created_at', { ascending: false });
+
+  if (error && (
+    error.code === 'PGRST200' ||
+    error.code === '42P01' ||
+    error.message?.includes('spark_comments')
+  )) {
+    const fallback = await supabase
+      .from('sparks')
+      .select('*, photos:spark_photos(id, image_url, position)')
+      .eq('partnership_id', partnershipId)
+      .order('created_at', { ascending: false });
+    data = fallback.data;
+    error = fallback.error;
+  }
+
   if (error) throw error;
   return (data ?? []).map((s) => ({
     ...s,
     photos: (s.photos ?? []).slice().sort((a, b) => a.position - b.position),
+    comments: (s.comments ?? []).slice().sort((a, b) =>
+      (a.created_at > b.created_at ? 1 : -1),
+    ),
   }));
 }
 
@@ -150,4 +168,18 @@ export async function deleteSpark(sparkId) {
   // spark_photos cascades via FK.
   const { error } = await supabase.from('sparks').delete().eq('id', sparkId);
   if (error) throw error;
+}
+
+export async function createSparkComment({ sparkId, authorId, body }) {
+  const { data, error } = await supabase
+    .from('spark_comments')
+    .insert({
+      spark_id: sparkId,
+      author_id: authorId,
+      body: body.trim(),
+    })
+    .select('id, spark_id, author_id, body, created_at')
+    .single();
+  if (error) throw error;
+  return data;
 }

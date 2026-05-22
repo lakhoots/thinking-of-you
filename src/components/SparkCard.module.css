@@ -207,3 +207,117 @@
 }
 
 .editBtn:hover { background: rgba(26, 18, 8, 0.12); }
+
+.comments {
+  border-top: 1px solid rgba(26, 18, 8, 0.08);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.commentList {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.comment {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+}
+
+.commentAvatar {
+  width: 21px;
+  height: 21px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-family: var(--sans);
+  font-size: 9px;
+  font-weight: 500;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.commentAvatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.commentBubble {
+  min-width: 0;
+  background: rgba(26, 18, 8, 0.045);
+  border: 1px solid rgba(26, 18, 8, 0.055);
+  border-radius: 9px;
+  padding: 6px 8px 7px;
+}
+
+.commentMeta {
+  font-size: 10px;
+  font-weight: 600;
+  color: rgba(26, 18, 8, 0.58);
+  margin-bottom: 2px;
+}
+
+.commentBody {
+  font-size: 12px;
+  font-weight: 300;
+  line-height: 1.45;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.commentForm {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.commentInput {
+  min-width: 0;
+  flex: 1;
+  background: var(--bg-raised);
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 300;
+  padding: 9px 12px;
+  outline: none;
+}
+
+.commentInput:focus { border-color: rgba(26, 18, 8, 0.38); }
+.commentInput::placeholder { color: var(--ink-muted); }
+
+.commentSubmit {
+  border: none;
+  background: var(--chain);
+  color: rgba(240, 230, 208, 0.95);
+  border-radius: 999px;
+  padding: 9px 12px;
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.commentSubmit:disabled {
+  opacity: 0.34;
+  cursor: not-allowed;
+}
+
+.commentError {
+  color: #9C5E4A;
+  font-size: 11px;
+  line-height: 1.4;
+}

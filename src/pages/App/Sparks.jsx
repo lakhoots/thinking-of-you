@@ -26,6 +26,7 @@ export default function Sparks({
   currentUserProfile,
   onOpenSettings,
   onSparkUpdated,
+  onSparkCommentAdded,
   onSparkRemoved,
   onSparkRestored,
   onEditOpenChange,
@@ -131,8 +132,11 @@ export default function Sparks({
                     key={s.id}
                     spark={s}
                     author={partnersById.get(s.author_id)}
+                    partnersById={partnersById}
                     isAuthor={s.author_id === currentUserId}
+                    currentUserId={currentUserId}
                     onEdit={(sp) => setEditingId(sp.id)}
+                    onCommentAdded={onSparkCommentAdded}
                   />
                 ))}
               </div>

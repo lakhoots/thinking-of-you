@@ -26,6 +26,29 @@ export default function AddSparkForm({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const fileRef = useRef();
+  const noteRef = useRef(null);
+
+  const keepNoteVisible = () => {
+    [0, 140, 320].forEach((delay) => {
+      window.setTimeout(() => {
+        noteRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      }, delay);
+    });
+  };
+
+  useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return undefined;
+    const onViewportChange = () => {
+      if (document.activeElement === noteRef.current) keepNoteVisible();
+    };
+    vv.addEventListener('resize', onViewportChange);
+    vv.addEventListener('scroll', onViewportChange);
+    return () => {
+      vv.removeEventListener('resize', onViewportChange);
+      vv.removeEventListener('scroll', onViewportChange);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -109,10 +132,13 @@ export default function AddSparkForm({
         <div className={styles.field}>
           <label className={styles.label}>Note</label>
           <textarea
+            ref={noteRef}
             className={styles.input}
             placeholder="saw this and thought of you…"
             value={note}
             onChange={(e) => setNote(e.target.value)}
+            onFocus={keepNoteVisible}
+            onClick={keepNoteVisible}
             rows={3}
             autoFocus={!editing}
           />

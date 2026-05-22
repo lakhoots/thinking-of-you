@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react';
+import { createSparkComment } from '../lib/sparks';
 import styles from './SparkCard.module.css';
 
 function fmtTime(iso) {
@@ -11,7 +12,15 @@ function fmtTime(iso) {
   return `${h}:${String(m).padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
 }
 
-export default function SparkCard({ spark, author, isAuthor, onEdit }) {
+export default function SparkCard({
+  spark,
+  author,
+  partnersById,
+  isAuthor,
+  currentUserId,
+  onEdit,
+  onCommentAdded,
+}) {
   const name = author?.name || 'Someone';
   const accent = author?.accent_color || '#9C5E4A';
   const initial = (name[0] || '?').toUpperCase();
@@ -24,6 +33,9 @@ export default function SparkCard({ spark, author, isAuthor, onEdit }) {
 
   const carouselRef = useRef(null);
   const [activeIdx, setActiveIdx] = useState(0);
+  const [comment, setComment] = useState('');
+  const [commentBusy, setCommentBusy] = useState(false);
+  const [commentError, setCommentError] = useState(null);
 
   const onCarouselScroll = () => {
     const el = carouselRef.current;
@@ -38,6 +50,29 @@ export default function SparkCard({ spark, author, isAuthor, onEdit }) {
     const clamped = Math.max(0, Math.min(photos.length - 1, idx));
     el.scrollTo({ left: clamped * el.clientWidth, behavior: 'smooth' });
   };
+
+  const submitComment = async (e) => {
+    e.preventDefault();
+    const body = comment.trim();
+    if (!body || commentBusy) return;
+    setCommentBusy(true);
+    setCommentError(null);
+    try {
+      const created = await createSparkComment({
+        sparkId: spark.id,
+        authorId: currentUserId,
+        body,
+      });
+      onCommentAdded?.(spark.id, created);
+      setComment('');
+    } catch (err) {
+      setCommentError(err.message);
+    } finally {
+      setCommentBusy(false);
+    }
+  };
+
+  const comments = spark.comments ?? [];
 
   return (
     <article className={styles.card}>
@@ -125,6 +160,53 @@ export default function SparkCard({ spark, author, isAuthor, onEdit }) {
           </button>
         </div>
       )}
+
+      <div className={styles.comments}>
+        {comments.length > 0 && (
+          <div className={styles.commentList}>
+            {comments.map((c) => {
+              const commenter = partnersById?.get(c.author_id);
+              return (
+                <div key={c.id} className={styles.comment}>
+                  <div
+                    className={styles.commentAvatar}
+                    style={{ background: commenter?.accent_color || '#9C5E4A' }}
+                    aria-hidden
+                  >
+                    {commenter?.photo_url
+                      ? <img src={commenter.photo_url} alt="" />
+                      : (commenter?.name?.[0] || '?').toUpperCase()}
+                  </div>
+                  <div className={styles.commentBubble}>
+                    <div className={styles.commentMeta}>
+                      {commenter?.name || 'Someone'}
+                    </div>
+                    <div className={styles.commentBody}>{c.body}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <form className={styles.commentForm} onSubmit={submitComment}>
+          <input
+            className={styles.commentInput}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+            placeholder="Leave a comment…"
+            aria-label="Leave a comment"
+          />
+          <button
+            type="submit"
+            className={styles.commentSubmit}
+            disabled={!comment.trim() || commentBusy}
+          >
+            {commentBusy ? '…' : 'Send'}
+          </button>
+        </form>
+        {commentError && <div className={styles.commentError}>{commentError}</div>}
+      </div>
     </article>
   );
 }

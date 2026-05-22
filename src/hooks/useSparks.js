@@ -39,7 +39,7 @@ export function useSparks(partnershipId) {
         (payload) => {
           setSparks((prev) => {
             if (prev.some((s) => s.id === payload.new.id)) return prev;
-            return [{ ...payload.new, photos: [] }, ...prev];
+            return [{ ...payload.new, photos: [], comments: [] }, ...prev];
           });
         },
       )
@@ -87,6 +87,25 @@ export function useSparks(partnershipId) {
           }
         },
       )
+      .on(
+        'postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'spark_comments' },
+        (payload) => {
+          const comment = payload.new;
+          setSparks((prev) =>
+            prev.map((s) => {
+              if (s.id !== comment.spark_id) return s;
+              if (s.comments?.some((c) => c.id === comment.id)) return s;
+              return {
+                ...s,
+                comments: [...(s.comments ?? []), comment].sort((a, b) =>
+                  (a.created_at > b.created_at ? 1 : -1),
+                ),
+              };
+            }),
+          );
+        },
+      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [partnershipId]);
@@ -104,9 +123,24 @@ export function useSparks(partnershipId) {
     setSparks((prev) => prev.map((x) => (x.id === s.id ? { ...x, ...s } : x)));
   }, []);
 
+  const addCommentLocal = useCallback((sparkId, comment) => {
+    setSparks((prev) =>
+      prev.map((s) => {
+        if (s.id !== sparkId) return s;
+        if (s.comments?.some((c) => c.id === comment.id)) return s;
+        return {
+          ...s,
+          comments: [...(s.comments ?? []), comment].sort((a, b) =>
+            (a.created_at > b.created_at ? 1 : -1),
+          ),
+        };
+      }),
+    );
+  }, []);
+
   const removeLocal = useCallback((id) => {
     setSparks((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
-  return { sparks, loading, refresh, addLocal, updateLocal, removeLocal };
+  return { sparks, loading, refresh, addLocal, updateLocal, addCommentLocal, removeLocal };
 }
