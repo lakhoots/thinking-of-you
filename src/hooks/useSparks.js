@@ -2,6 +2,18 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { listSparks, fetchSparkPhotos } from '../lib/sparks';
 
+function sortCommentsNewestFirst(comments) {
+  return (comments ?? []).slice().sort((a, b) =>
+    (a.created_at < b.created_at ? 1 : -1),
+  );
+}
+
+function sortViewsNewestFirst(views) {
+  return (views ?? []).slice().sort((a, b) =>
+    (a.seen_at < b.seen_at ? 1 : -1),
+  );
+}
+
 export function useSparks(partnershipId) {
   const [sparks, setSparks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -39,7 +51,7 @@ export function useSparks(partnershipId) {
         (payload) => {
           setSparks((prev) => {
             if (prev.some((s) => s.id === payload.new.id)) return prev;
-            return [{ ...payload.new, photos: [], comments: [] }, ...prev];
+            return [{ ...payload.new, photos: [], comments: [], views: [] }, ...prev];
           });
         },
       )
@@ -98,9 +110,33 @@ export function useSparks(partnershipId) {
               if (s.comments?.some((c) => c.id === comment.id)) return s;
               return {
                 ...s,
-                comments: [...(s.comments ?? []), comment].sort((a, b) =>
-                  (a.created_at > b.created_at ? 1 : -1),
-                ),
+                comments: sortCommentsNewestFirst([...(s.comments ?? []), comment]),
+              };
+            }),
+          );
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'spark_views' },
+        (payload) => {
+          const view = payload.new ?? payload.old;
+          if (!view?.spark_id) return;
+          setSparks((prev) =>
+            prev.map((s) => {
+              if (s.id !== view.spark_id) return s;
+              if (payload.eventType === 'DELETE') {
+                return {
+                  ...s,
+                  views: (s.views ?? []).filter((v) => v.id !== view.id),
+                };
+              }
+              const withoutExisting = (s.views ?? []).filter((v) =>
+                v.id !== view.id && v.user_id !== view.user_id,
+              );
+              return {
+                ...s,
+                views: sortViewsNewestFirst([...withoutExisting, view]),
               };
             }),
           );
@@ -130,9 +166,22 @@ export function useSparks(partnershipId) {
         if (s.comments?.some((c) => c.id === comment.id)) return s;
         return {
           ...s,
-          comments: [...(s.comments ?? []), comment].sort((a, b) =>
-            (a.created_at > b.created_at ? 1 : -1),
-          ),
+          comments: sortCommentsNewestFirst([...(s.comments ?? []), comment]),
+        };
+      }),
+    );
+  }, []);
+
+  const markSeenLocal = useCallback((sparkId, view) => {
+    setSparks((prev) =>
+      prev.map((s) => {
+        if (s.id !== sparkId) return s;
+        const withoutExisting = (s.views ?? []).filter((v) =>
+          v.id !== view.id && v.user_id !== view.user_id,
+        );
+        return {
+          ...s,
+          views: sortViewsNewestFirst([...withoutExisting, view]),
         };
       }),
     );
@@ -142,5 +191,5 @@ export function useSparks(partnershipId) {
     setSparks((prev) => prev.filter((s) => s.id !== id));
   }, []);
 
-  return { sparks, loading, refresh, addLocal, updateLocal, addCommentLocal, removeLocal };
+  return { sparks, loading, refresh, addLocal, updateLocal, addCommentLocal, markSeenLocal, removeLocal };
 }

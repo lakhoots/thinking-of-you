@@ -26,6 +26,7 @@ export default function AppShell({ user, profile, onProfileChange }) {
     addLocal: addSparkLocal,
     updateLocal: updateSparkLocal,
     addCommentLocal: addSparkCommentLocal,
+    markSeenLocal: markSparkSeenLocal,
     removeLocal: removeSparkLocal,
   } = useSparks(profile.partnership_id);
 
@@ -73,6 +74,7 @@ export default function AppShell({ user, profile, onProfileChange }) {
           onOpenSettings={openSettings}
           onSparkUpdated={updateSparkLocal}
           onSparkCommentAdded={addSparkCommentLocal}
+          onSparkSeen={markSparkSeenLocal}
           onSparkRemoved={removeSparkLocal}
           onSparkRestored={addSparkLocal}
           onEditOpenChange={setSparkEditing}

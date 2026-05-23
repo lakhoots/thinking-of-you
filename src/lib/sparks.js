@@ -4,9 +4,24 @@ import { compressImageDetailed, extForMime } from './image';
 export async function listSparks(partnershipId) {
   let { data, error } = await supabase
     .from('sparks')
-    .select('*, photos:spark_photos(id, image_url, position), comments:spark_comments(id, spark_id, author_id, body, created_at)')
+    .select('*, photos:spark_photos(id, image_url, position), comments:spark_comments(id, spark_id, author_id, body, created_at), views:spark_views(id, spark_id, user_id, seen_at)')
     .eq('partnership_id', partnershipId)
     .order('created_at', { ascending: false });
+
+  if (error && (
+    error.code === 'PGRST200' ||
+    error.code === '42P01' ||
+    error.message?.includes('spark_comments') ||
+    error.message?.includes('spark_views')
+  )) {
+    const fallback = await supabase
+      .from('sparks')
+      .select('*, photos:spark_photos(id, image_url, position), comments:spark_comments(id, spark_id, author_id, body, created_at)')
+      .eq('partnership_id', partnershipId)
+      .order('created_at', { ascending: false });
+    data = fallback.data;
+    error = fallback.error;
+  }
 
   if (error && (
     error.code === 'PGRST200' ||
@@ -27,7 +42,10 @@ export async function listSparks(partnershipId) {
     ...s,
     photos: (s.photos ?? []).slice().sort((a, b) => a.position - b.position),
     comments: (s.comments ?? []).slice().sort((a, b) =>
-      (a.created_at > b.created_at ? 1 : -1),
+      (a.created_at < b.created_at ? 1 : -1),
+    ),
+    views: (s.views ?? []).slice().sort((a, b) =>
+      (a.seen_at < b.seen_at ? 1 : -1),
     ),
   }));
 }
@@ -179,6 +197,23 @@ export async function createSparkComment({ sparkId, authorId, body }) {
       body: body.trim(),
     })
     .select('id, spark_id, author_id, body, created_at')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function markSparkSeen({ sparkId, userId }) {
+  const { data, error } = await supabase
+    .from('spark_views')
+    .upsert(
+      {
+        spark_id: sparkId,
+        user_id: userId,
+        seen_at: new Date().toISOString(),
+      },
+      { onConflict: 'spark_id,user_id' },
+    )
+    .select('id, spark_id, user_id, seen_at')
     .single();
   if (error) throw error;
   return data;

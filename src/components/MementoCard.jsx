@@ -37,7 +37,7 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
 
   return (
     <div
-      className={`${styles.wrap} ${arrangeMode ? styles.arranging : ''} ${dragging ? styles.dragging : ''} ${selected ? styles.selected : ''} ${borderless ? styles.borderless : ''}`}
+      className={`${styles.wrap} ${type === 'photo' ? styles.photoCard : ''} ${arrangeMode ? styles.arranging : ''} ${dragging ? styles.dragging : ''} ${selected ? styles.selected : ''} ${borderless ? styles.borderless : ''}`}
       data-card-id={memento.id}
       style={{
         left: x - widthPx / 2,

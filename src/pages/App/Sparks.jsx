@@ -27,6 +27,7 @@ export default function Sparks({
   onOpenSettings,
   onSparkUpdated,
   onSparkCommentAdded,
+  onSparkSeen,
   onSparkRemoved,
   onSparkRestored,
   onEditOpenChange,
@@ -137,6 +138,7 @@ export default function Sparks({
                     currentUserId={currentUserId}
                     onEdit={(sp) => setEditingId(sp.id)}
                     onCommentAdded={onSparkCommentAdded}
+                    onSeen={onSparkSeen}
                   />
                 ))}
               </div>

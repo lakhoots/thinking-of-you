@@ -1,5 +1,5 @@
-import { useRef, useState } from 'react';
-import { createSparkComment } from '../lib/sparks';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { createSparkComment, markSparkSeen } from '../lib/sparks';
 import styles from './SparkCard.module.css';
 
 function fmtTime(iso) {
@@ -12,6 +12,16 @@ function fmtTime(iso) {
   return `${h}:${String(m).padStart(2, '0')} ${am ? 'AM' : 'PM'}`;
 }
 
+function fmtDateTime(iso) {
+  const d = new Date(iso);
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(d);
+}
+
 export default function SparkCard({
   spark,
   author,
@@ -20,6 +30,7 @@ export default function SparkCard({
   currentUserId,
   onEdit,
   onCommentAdded,
+  onSeen,
 }) {
   const name = author?.name || 'Someone';
   const accent = author?.accent_color || '#9C5E4A';
@@ -32,10 +43,23 @@ export default function SparkCard({
     : (spark.image_url ? [{ id: 'cover', image_url: spark.image_url, position: 0 }] : []);
 
   const carouselRef = useRef(null);
+  const cardRef = useRef(null);
   const [activeIdx, setActiveIdx] = useState(0);
   const [comment, setComment] = useState('');
   const [commentBusy, setCommentBusy] = useState(false);
   const [commentError, setCommentError] = useState(null);
+  const [lightboxIdx, setLightboxIdx] = useState(null);
+  const [seenBusy, setSeenBusy] = useState(false);
+  const gestureRef = useRef(null);
+  const lightboxImageRef = useRef(null);
+  const lightboxTransformRef = useRef({ scale: 1, x: 0, y: 0 });
+  const lightboxRafRef = useRef(null);
+
+  const seenByMe = !!spark.views?.some((v) => v.user_id === currentUserId);
+  const seenByOthers = useMemo(
+    () => (spark.views ?? []).filter((v) => v.user_id !== currentUserId),
+    [spark.views, currentUserId],
+  );
 
   const onCarouselScroll = () => {
     const el = carouselRef.current;
@@ -74,8 +98,120 @@ export default function SparkCard({
 
   const comments = spark.comments ?? [];
 
+  const applyLightboxTransform = () => {
+    lightboxRafRef.current = null;
+    const img = lightboxImageRef.current;
+    if (!img) return;
+    const { scale, x, y } = lightboxTransformRef.current;
+    img.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
+  };
+
+  const setLightboxTransformFast = (next) => {
+    lightboxTransformRef.current = next;
+    if (lightboxRafRef.current) return;
+    lightboxRafRef.current = requestAnimationFrame(applyLightboxTransform);
+  };
+
+  const resetLightboxTransform = () => {
+    if (lightboxRafRef.current) {
+      cancelAnimationFrame(lightboxRafRef.current);
+      lightboxRafRef.current = null;
+    }
+    lightboxTransformRef.current = { scale: 1, x: 0, y: 0 };
+    const img = lightboxImageRef.current;
+    if (img) img.style.transform = 'translate3d(0px, 0px, 0) scale(1)';
+  };
+
+  const openLightbox = (idx) => {
+    gestureRef.current = null;
+    resetLightboxTransform();
+    setLightboxIdx(idx);
+  };
+
+  const closeLightbox = () => {
+    gestureRef.current = null;
+    resetLightboxTransform();
+    setLightboxIdx(null);
+  };
+
+  const lightboxTouchStart = (e) => {
+    const transform = lightboxTransformRef.current;
+    if (e.touches.length === 2) {
+      const [a, b] = e.touches;
+      gestureRef.current = {
+        type: 'pinch',
+        distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
+        scale: transform.scale,
+        x: transform.x,
+        y: transform.y,
+      };
+    } else if (e.touches.length === 1 && transform.scale > 1) {
+      const t = e.touches[0];
+      gestureRef.current = {
+        type: 'pan',
+        startX: t.clientX,
+        startY: t.clientY,
+        scale: transform.scale,
+        x: transform.x,
+        y: transform.y,
+      };
+    }
+  };
+
+  const lightboxTouchMove = (e) => {
+    const gesture = gestureRef.current;
+    if (!gesture) return;
+    e.preventDefault();
+    if (gesture.type === 'pinch' && e.touches.length === 2) {
+      const [a, b] = e.touches;
+      const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
+      const scale = Math.min(4, Math.max(1, gesture.scale * (distance / gesture.distance)));
+      setLightboxTransformFast({
+        scale,
+        x: scale === 1 ? 0 : gesture.x,
+        y: scale === 1 ? 0 : gesture.y,
+      });
+    } else if (gesture.type === 'pan' && e.touches.length === 1) {
+      const t = e.touches[0];
+      const limit = 160 * gesture.scale;
+      setLightboxTransformFast({
+        scale: gesture.scale,
+        x: Math.max(-limit, Math.min(limit, gesture.x + t.clientX - gesture.startX)),
+        y: Math.max(-limit, Math.min(limit, gesture.y + t.clientY - gesture.startY)),
+      });
+    }
+  };
+
+  const lightboxTouchEnd = () => {
+    gestureRef.current = null;
+    const curr = lightboxTransformRef.current;
+    if (curr.scale <= 1.03) resetLightboxTransform();
+  };
+
+  useEffect(() => {
+    if (!currentUserId || currentUserId === spark.author_id || seenByMe || seenBusy) return;
+    const el = cardRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver((entries) => {
+      const entry = entries[0];
+      if (!entry?.isIntersecting || entry.intersectionRatio < 0.6) return;
+      observer.disconnect();
+      setSeenBusy(true);
+      markSparkSeen({ sparkId: spark.id, userId: currentUserId })
+        .then((view) => onSeen?.(spark.id, view))
+        .catch((err) => {
+          if (!err.message?.includes('spark_views')) {
+            console.error('mark spark seen', err);
+          }
+        })
+        .finally(() => setSeenBusy(false));
+    }, { threshold: [0.6] });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [currentUserId, onSeen, seenBusy, seenByMe, spark.author_id, spark.id]);
+
   return (
-    <article className={styles.card}>
+    <article ref={cardRef} className={styles.card}>
       <header className={styles.head}>
         <div
           className={styles.avatar}
@@ -94,7 +230,14 @@ export default function SparkCard({
 
       {photos.length === 1 && (
         <div className={styles.photoWrap}>
-          <img className={styles.photo} src={photos[0].image_url} alt="" />
+          <button
+            type="button"
+            className={styles.photoButton}
+            onClick={() => openLightbox(0)}
+            aria-label="View photo larger"
+          >
+            <img className={styles.photo} src={photos[0].image_url} alt="" />
+          </button>
         </div>
       )}
 
@@ -106,9 +249,16 @@ export default function SparkCard({
               className={styles.carousel}
               onScroll={onCarouselScroll}
             >
-              {photos.map((p) => (
+              {photos.map((p, i) => (
                 <div key={p.id} className={styles.slide}>
-                  <img src={p.image_url} alt="" />
+                  <button
+                    type="button"
+                    className={styles.photoButton}
+                    onClick={() => openLightbox(i)}
+                    aria-label="View photo larger"
+                  >
+                    <img src={p.image_url} alt="" />
+                  </button>
                 </div>
               ))}
             </div>
@@ -161,6 +311,15 @@ export default function SparkCard({
         </div>
       )}
 
+      {seenByOthers.length > 0 && (
+        <div className={styles.seenBy}>
+          Seen by {seenByOthers.map((v) => {
+            const viewer = partnersById?.get(v.user_id);
+            return viewer?.name || 'Someone';
+          }).join(', ')}
+        </div>
+      )}
+
       <div className={styles.comments}>
         {comments.length > 0 && (
           <div className={styles.commentList}>
@@ -179,7 +338,8 @@ export default function SparkCard({
                   </div>
                   <div className={styles.commentBubble}>
                     <div className={styles.commentMeta}>
-                      {commenter?.name || 'Someone'}
+                      <span>{commenter?.name || 'Someone'}</span>
+                      <time dateTime={c.created_at}>{fmtDateTime(c.created_at)}</time>
                     </div>
                     <div className={styles.commentBody}>{c.body}</div>
                   </div>
@@ -207,6 +367,35 @@ export default function SparkCard({
         </form>
         {commentError && <div className={styles.commentError}>{commentError}</div>}
       </div>
+
+      {lightboxIdx !== null && (
+        <div
+          className={styles.lightbox}
+          role="dialog"
+          aria-modal="true"
+          aria-label="Spark photo"
+          onClick={closeLightbox}
+          onTouchStart={lightboxTouchStart}
+          onTouchMove={lightboxTouchMove}
+          onTouchEnd={lightboxTouchEnd}
+        >
+          <button
+            type="button"
+            className={styles.lightboxClose}
+            onClick={closeLightbox}
+            aria-label="Close photo"
+          >
+            ×
+          </button>
+          <img
+            ref={lightboxImageRef}
+            className={styles.lightboxImage}
+            src={photos[lightboxIdx]?.image_url}
+            alt=""
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </article>
   );
 }

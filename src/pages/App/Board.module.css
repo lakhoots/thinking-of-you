@@ -111,9 +111,6 @@
 .headerDone:disabled { opacity: 0.45; cursor: default; }
 
 .viewportArrange {
-  background: #E6D7B8;
-  background-image: radial-gradient(rgba(26, 18, 8, 0.07) 1px, transparent 1px);
-  background-size: 18px 18px;
   height: calc(var(--vv-h, 100vh) - 52px); /* NavBar is hidden in arrange mode */
 }
 
@@ -222,6 +219,30 @@
   position: absolute;
   transform-origin: 0 0;
   will-change: transform;
+  z-index: 1;
+  overflow: hidden;
+  background-color: #B78249;
+  background-image:
+    url('/cork-board-large.jpg'),
+    linear-gradient(145deg, rgba(255, 226, 159, 0.12), transparent 45%, rgba(66, 35, 13, 0.12));
+  background-size: 100% 100%, 100% 100%;
+  background-repeat: no-repeat, no-repeat;
+  box-shadow:
+    inset 0 42px 84px rgba(255, 238, 187, 0.12),
+    inset 0 -52px 110px rgba(91, 50, 17, 0.2),
+    inset 38px 0 92px rgba(91, 50, 17, 0.13),
+    inset -38px 0 92px rgba(91, 50, 17, 0.13);
+}
+
+.canvas::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(circle at 50% 38%, transparent 0 45%, rgba(71, 39, 13, 0.16) 100%),
+    linear-gradient(90deg, rgba(74, 40, 13, 0.12), transparent 12%, transparent 88%, rgba(74, 40, 13, 0.12));
+  z-index: 0;
 }
 
 .empty {
