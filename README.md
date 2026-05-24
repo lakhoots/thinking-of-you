@@ -107,27 +107,18 @@ Actions → New repository secret):
 | `SUPABASE_DB_PASSWORD` | Project Settings → Database (reset it there if unknown) |
 | `SUPABASE_ACCESS_TOKEN` | https://supabase.com/dashboard/account/tokens |
 
-**2. Baseline the existing migrations.** Migrations `0001`–`0009` were applied
-by hand before CI existed, so the remote history table doesn't know about them.
-They must be marked as already-applied once — otherwise the first `db push`
-would try to re-run them and fail.
+**2. Baseline the existing migrations** *(done — here for context).* Migrations
+`0001`–`0009` were applied by hand before CI existed, so they were marked as
+already-applied in the remote history table with a one-time
 
-The repo ships a one-time workflow for this. After the secrets above are set:
+```bash
+supabase link --project-ref <ref>
+supabase migration repair --status applied 0001 0002 0003 0004 0005 0006 0007 0008 0009
+```
 
-1. Make sure both workflows are on `main` (merge this branch). The deploy
-   workflow only fires on changes under `supabase/migrations/`, so merging it
-   does **not** trigger a push.
-2. Repo → **Actions** tab → **Baseline existing migrations (one-time)** → **Run
-   workflow**. It marks `0001`–`0009` as applied and prints the migration list
-   for confirmation. (It only writes to the history table — it does not re-run
-   any SQL.)
-3. Once it's green, delete `.github/workflows/baseline-migrations.yml`.
-
-> Prefer the CLI? The equivalent local commands are
-> `supabase link --project-ref <ref>` then
-> `supabase migration repair --status applied 0001 0002 0003 0004 0005 0006 0007 0008 0009`.
-
-From then on, only brand-new migration files get pushed.
+That's why `db push` only ever applies brand-new migration files. If you ever
+point this repo at a fresh database, run that same `repair` once so the existing
+migrations aren't re-run.
 
 ---
 
