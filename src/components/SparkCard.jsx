@@ -44,8 +44,10 @@ export default function SparkCard({
 
   const carouselRef = useRef(null);
   const cardRef = useRef(null);
+  const commentInputRef = useRef(null);
   const [activeIdx, setActiveIdx] = useState(0);
   const [comment, setComment] = useState('');
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentBusy, setCommentBusy] = useState(false);
   const [commentError, setCommentError] = useState(null);
   const [lightboxIdx, setLightboxIdx] = useState(null);
@@ -89,6 +91,7 @@ export default function SparkCard({
       });
       onCommentAdded?.(spark.id, created);
       setComment('');
+      setCommentsOpen(true);
     } catch (err) {
       setCommentError(err.message);
     } finally {
@@ -97,6 +100,17 @@ export default function SparkCard({
   };
 
   const comments = spark.comments ?? [];
+  const commentCountLabel = comments.length === 1 ? '1 comment' : `${comments.length} comments`;
+
+  const toggleComments = () => {
+    setCommentsOpen((open) => {
+      const next = !open;
+      if (!open) {
+        window.requestAnimationFrame(() => commentInputRef.current?.focus());
+      }
+      return next;
+    });
+  };
 
   const applyLightboxTransform = () => {
     lightboxRafRef.current = null;
@@ -311,61 +325,80 @@ export default function SparkCard({
         </div>
       )}
 
-      {seenByOthers.length > 0 && (
-        <div className={styles.seenBy}>
-          Seen by {seenByOthers.map((v) => {
-            const viewer = partnersById?.get(v.user_id);
-            return viewer?.name || 'Someone';
-          }).join(', ')}
-        </div>
-      )}
+      <div className={`${styles.comments} ${commentsOpen ? styles.commentsOpen : ''}`}>
+        <div className={styles.commentActionRow}>
+          <button
+            type="button"
+            className={styles.commentToggle}
+            onClick={toggleComments}
+            aria-expanded={commentsOpen}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.15" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" />
+            </svg>
+            <span>{comments.length > 0 ? commentCountLabel : 'Comment'}</span>
+          </button>
 
-      <div className={styles.comments}>
-        {comments.length > 0 && (
-          <div className={styles.commentList}>
-            {comments.map((c) => {
-              const commenter = partnersById?.get(c.author_id);
-              return (
-                <div key={c.id} className={styles.comment}>
-                  <div
-                    className={styles.commentAvatar}
-                    style={{ background: commenter?.accent_color || '#9C5E4A' }}
-                    aria-hidden
-                  >
-                    {commenter?.photo_url
-                      ? <img src={commenter.photo_url} alt="" />
-                      : (commenter?.name?.[0] || '?').toUpperCase()}
-                  </div>
-                  <div className={styles.commentBubble}>
-                    <div className={styles.commentMeta}>
-                      <span>{commenter?.name || 'Someone'}</span>
-                      <time dateTime={c.created_at}>{fmtDateTime(c.created_at)}</time>
+          {seenByOthers.length > 0 && (
+            <div className={styles.seenBy}>
+              Seen by {seenByOthers.map((v) => {
+                const viewer = partnersById?.get(v.user_id);
+                return viewer?.name || 'Someone';
+              }).join(', ')}
+            </div>
+          )}
+        </div>
+
+        {commentsOpen && (
+          <div className={styles.commentPanel}>
+            {comments.length > 0 && (
+              <div className={styles.commentList}>
+                {comments.map((c) => {
+                  const commenter = partnersById?.get(c.author_id);
+                  return (
+                    <div key={c.id} className={styles.comment}>
+                      <div
+                        className={styles.commentAvatar}
+                        style={{ background: commenter?.accent_color || '#9C5E4A' }}
+                        aria-hidden
+                      >
+                        {commenter?.photo_url
+                          ? <img src={commenter.photo_url} alt="" />
+                          : (commenter?.name?.[0] || '?').toUpperCase()}
+                      </div>
+                      <div className={styles.commentBubble}>
+                        <div className={styles.commentMeta}>
+                          <span>{commenter?.name || 'Someone'}</span>
+                          <time dateTime={c.created_at}>{fmtDateTime(c.created_at)}</time>
+                        </div>
+                        <div className={styles.commentBody}>{c.body}</div>
+                      </div>
                     </div>
-                    <div className={styles.commentBody}>{c.body}</div>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
+
+            <form className={styles.commentForm} onSubmit={submitComment}>
+              <input
+                ref={commentInputRef}
+                className={styles.commentInput}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder="Leave a comment…"
+                aria-label="Leave a comment"
+              />
+              <button
+                type="submit"
+                className={styles.commentSubmit}
+                disabled={!comment.trim() || commentBusy}
+              >
+                {commentBusy ? '…' : 'Send'}
+              </button>
+            </form>
+            {commentError && <div className={styles.commentError}>{commentError}</div>}
           </div>
         )}
-
-        <form className={styles.commentForm} onSubmit={submitComment}>
-          <input
-            className={styles.commentInput}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Leave a comment…"
-            aria-label="Leave a comment"
-          />
-          <button
-            type="submit"
-            className={styles.commentSubmit}
-            disabled={!comment.trim() || commentBusy}
-          >
-            {commentBusy ? '…' : 'Send'}
-          </button>
-        </form>
-        {commentError && <div className={styles.commentError}>{commentError}</div>}
       </div>
 
       {lightboxIdx !== null && (

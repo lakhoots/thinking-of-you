@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { usePartnership } from '../../hooks/usePartnership';
 import { useMementos } from '../../hooks/useMementos';
@@ -28,9 +28,14 @@ export default function AppShell({ user, profile, onProfileChange }) {
     addCommentLocal: addSparkCommentLocal,
     markSeenLocal: markSparkSeenLocal,
     removeLocal: removeSparkLocal,
+    refresh: refreshSparks,
   } = useSparks(profile.partnership_id);
 
   const partnerJoined = !!(partnership?.partner_a_id && partnership?.partner_b_id);
+
+  useEffect(() => {
+    if (tab === 'sparks') refreshSparks();
+  }, [tab, refreshSparks]);
 
   // If the partnership has only one member, show the waiting state instead of the app.
   if (partnership && !partnerJoined) {

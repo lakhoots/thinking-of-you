@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import MementoCard, { CARD_W, CARD_H } from '../../components/MementoCard';
+import MementoCard from '../../components/MementoCard';
 import MementoDetailSheet from '../../components/MementoDetailSheet';
 import { deleteMemento, moveMementos } from '../../lib/mementos';
 import styles from './Board.module.css';
@@ -9,6 +9,7 @@ const CANVAS_H = 2600;
 const MIN_SCALE = 0.18;
 const MAX_SCALE = 2.0;
 const INITIAL_SCALE = 0.38;
+const DESKTOP_WHEEL_ZOOM_SENSITIVITY = 0.00065;
 
 export default function Board({
   mementos,
@@ -88,22 +89,28 @@ export default function Board({
     if (!lastAddedId) return;
     const m = mementos.find((x) => x.id === lastAddedId);
     if (!m) return;
-    setEnteringId(lastAddedId);
-    const t = setTimeout(() => setEnteringId(null), 700);
+    let t;
+    const frame = requestAnimationFrame(() => {
+      setEnteringId(lastAddedId);
+      t = setTimeout(() => setEnteringId(null), 700);
 
-    const vp = viewportRef.current?.getBoundingClientRect();
-    if (vp) {
-      const s = Math.max(tx.current.s, 0.52);
-      const px = m.pos_x * CANVAS_W;
-      const py = m.pos_y * CANVAS_H;
-      tx.current = {
-        x: vp.width / 2 - px * s,
-        y: vp.height / 2 - py * s,
-        s,
-      };
-      applyTx();
-    }
-    return () => clearTimeout(t);
+      const vp = viewportRef.current?.getBoundingClientRect();
+      if (vp) {
+        const s = Math.max(tx.current.s, 0.52);
+        const px = m.pos_x * CANVAS_W;
+        const py = m.pos_y * CANVAS_H;
+        tx.current = {
+          x: vp.width / 2 - px * s,
+          y: vp.height / 2 - py * s,
+          s,
+        };
+        applyTx();
+      }
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(t);
+    };
   }, [lastAddedId, mementos, applyTx]);
 
   const onPtrDown = useCallback((e) => {
@@ -326,7 +333,12 @@ export default function Board({
     if (!vp) return;
     const onWheel = (e) => {
       e.preventDefault();
-      const factor = e.deltaY > 0 ? 0.91 : 1.1;
+      const deltaY = e.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? e.deltaY * 16
+        : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? e.deltaY * vp.clientHeight
+          : e.deltaY;
+      const factor = Math.exp(-deltaY * DESKTOP_WHEEL_ZOOM_SENSITIVITY);
       const oldS = tx.current.s;
       const newS = Math.max(MIN_SCALE, Math.min(MAX_SCALE, oldS * factor));
       tx.current.x = e.clientX - (e.clientX - tx.current.x) * (newS / oldS);
