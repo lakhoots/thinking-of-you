@@ -109,17 +109,25 @@ Actions → New repository secret):
 
 **2. Baseline the existing migrations.** Migrations `0001`–`0009` were applied
 by hand before CI existed, so the remote history table doesn't know about them.
-Mark them as already-applied once — otherwise the first `db push` would try to
-re-run them and fail. From the repo root:
+They must be marked as already-applied once — otherwise the first `db push`
+would try to re-run them and fail.
 
-```bash
-supabase link --project-ref <your-project-ref>
-supabase migration repair --status applied \
-  0001 0002 0003 0004 0005 0006 0007 0008 0009
-```
+The repo ships a one-time workflow for this. After the secrets above are set:
 
-Afterwards `supabase migration list` should show every migration as applied on
-both Local and Remote. From then on, only brand-new migration files get pushed.
+1. Make sure both workflows are on `main` (merge this branch). The deploy
+   workflow only fires on changes under `supabase/migrations/`, so merging it
+   does **not** trigger a push.
+2. Repo → **Actions** tab → **Baseline existing migrations (one-time)** → **Run
+   workflow**. It marks `0001`–`0009` as applied and prints the migration list
+   for confirmation. (It only writes to the history table — it does not re-run
+   any SQL.)
+3. Once it's green, delete `.github/workflows/baseline-migrations.yml`.
+
+> Prefer the CLI? The equivalent local commands are
+> `supabase link --project-ref <ref>` then
+> `supabase migration repair --status applied 0001 0002 0003 0004 0005 0006 0007 0008 0009`.
+
+From then on, only brand-new migration files get pushed.
 
 ---
 
