@@ -22,6 +22,30 @@ function fmtDateTime(iso) {
   }).format(d);
 }
 
+function keepCommentFormVisible(input) {
+  const form = input.closest('form');
+  const feed = input.closest('[data-sparks-feed]');
+  if (!form || !feed) return;
+
+  const align = () => {
+    const formRect = form.getBoundingClientRect();
+    const feedRect = feed.getBoundingClientRect();
+    const bottomSpace = 18;
+    const overflowBottom = formRect.bottom - (feedRect.bottom - bottomSpace);
+    const overflowTop = formRect.top - (feedRect.top + 18);
+
+    if (overflowBottom > 0) {
+      feed.scrollBy({ top: overflowBottom, behavior: 'smooth' });
+    } else if (overflowTop < 0) {
+      feed.scrollBy({ top: overflowTop, behavior: 'smooth' });
+    }
+  };
+
+  window.requestAnimationFrame(align);
+  window.setTimeout(align, 180);
+  window.setTimeout(align, 380);
+}
+
 export default function SparkCard({
   spark,
   author,
@@ -103,13 +127,7 @@ export default function SparkCard({
   const commentCountLabel = comments.length === 1 ? '1 comment' : `${comments.length} comments`;
 
   const toggleComments = () => {
-    setCommentsOpen((open) => {
-      const next = !open;
-      if (!open) {
-        window.requestAnimationFrame(() => commentInputRef.current?.focus());
-      }
-      return next;
-    });
+    setCommentsOpen((open) => !open);
   };
 
   const applyLightboxTransform = () => {
@@ -385,6 +403,8 @@ export default function SparkCard({
                 className={styles.commentInput}
                 value={comment}
                 onChange={(e) => setComment(e.target.value)}
+                onFocus={(e) => keepCommentFormVisible(e.currentTarget)}
+                onClick={(e) => keepCommentFormVisible(e.currentTarget)}
                 placeholder="Leave a comment…"
                 aria-label="Leave a comment"
               />
