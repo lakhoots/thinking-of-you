@@ -34,10 +34,18 @@ The app needs a Supabase project. Follow these steps:
 1. Go to https://supabase.com and create a project (free tier is fine).
    - If you're at the 2-project limit on your default org, create a new
      **organization** first (free orgs each have their own 2-project quota).
-2. Run the schema migration: open the project's SQL Editor → New query → paste
-   the contents of `supabase/migrations/0001_init.sql` → Run.
-   This creates the tables, RLS policies, storage buckets, and the realtime
-   subscription. Safe to run once on a fresh project.
+2. Apply the schema. From the repo root, with the [Supabase
+   CLI](#database-migrations) installed:
+
+   ```bash
+   supabase link --project-ref <your-project-ref>
+   supabase db push
+   ```
+
+   This runs every file in `supabase/migrations/` — tables, RLS policies,
+   storage buckets, and the realtime subscription. (You can also paste
+   `supabase/migrations/0001_init.sql` into the dashboard SQL Editor, but the
+   CLI is the path everything else uses.)
 3. Copy your project's **URL** and **anon public key** (Project Settings → API)
    into `.env.local`:
 
@@ -56,6 +64,62 @@ trigger a production deploy automatically. Build settings live in
 
 The same two env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) need to
 be set in **Netlify → Site settings → Environment variables**.
+
+---
+
+## Database migrations
+
+Schema changes live as SQL files in `supabase/migrations/`. When a migration
+file lands on `main`, GitHub Actions applies it to the production database
+automatically (`.github/workflows/deploy-migrations.yml`, which runs
+`supabase db push`). **Nobody has to log into the Supabase dashboard to ship a
+schema change — you just merge the file.**
+
+You'll need the Supabase CLI for the commands below: `brew install
+supabase/tap/supabase`, or run it ad-hoc with `npx supabase@2.101.0 …`.
+
+### Making a database change
+
+1. Create the migration file:
+
+   ```bash
+   supabase migration new short_description
+   ```
+
+   This writes `supabase/migrations/<timestamp>_short_description.sql`. Always
+   use this command — migrations run in filename order, and the timestamp
+   prefix is what keeps that order correct.
+2. Write your SQL in the new file.
+3. Commit it, open a PR, and merge to `main`. CI runs `supabase db push` and the
+   change goes live. Watch it under the repo's **Actions** tab; if `db push`
+   fails, the migration was *not* applied — fix the SQL and push again.
+
+No dashboard login, no manual SQL Editor step, no waiting on anyone else.
+
+### One-time setup (already configured — here for reference)
+
+**1. GitHub Actions secrets** (repo → Settings → Secrets and variables →
+Actions → New repository secret):
+
+| Secret | Where to find it |
+| --- | --- |
+| `SUPABASE_PROJECT_ID` | The project ref — the `xxxx` in `https://xxxx.supabase.co` |
+| `SUPABASE_DB_PASSWORD` | Project Settings → Database (reset it there if unknown) |
+| `SUPABASE_ACCESS_TOKEN` | https://supabase.com/dashboard/account/tokens |
+
+**2. Baseline the existing migrations.** Migrations `0001`–`0009` were applied
+by hand before CI existed, so the remote history table doesn't know about them.
+Mark them as already-applied once — otherwise the first `db push` would try to
+re-run them and fail. From the repo root:
+
+```bash
+supabase link --project-ref <your-project-ref>
+supabase migration repair --status applied \
+  0001 0002 0003 0004 0005 0006 0007 0008 0009
+```
+
+Afterwards `supabase migration list` should show every migration as applied on
+both Local and Remote. From then on, only brand-new migration files get pushed.
 
 ---
 
