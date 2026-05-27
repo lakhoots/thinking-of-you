@@ -1,4 +1,5 @@
 import styles from './NavBar.module.css';
+import { BoardIcon } from './BoardIcon';
 
 export default function NavBar({ tab, onTab, onAdd }) {
   return (
@@ -17,7 +18,7 @@ export default function NavBar({ tab, onTab, onAdd }) {
         className={`${styles.tab} ${tab === 'board' ? styles.on : ''}`}
         onClick={() => onTab('board')}
       >
-        <div className={styles.icon}>◫</div>
+        <div className={styles.icon}><BoardIcon size={20} /></div>
         <span>The Board</span>
       </div>
 
