@@ -1,0 +1,116 @@
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 2px;
+}
+
+.avatar {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  border: 1px solid var(--border-strong);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 500;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.name {
+  font-family: var(--sans);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.when {
+  margin-left: auto;
+  font-family: var(--sans);
+  font-size: 11px;
+  font-weight: 300;
+  color: var(--ink-muted);
+  letter-spacing: 0.02em;
+}
+
+.prompt {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-dim);
+}
+
+.body {
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 15px;
+  font-weight: 400;
+  line-height: 1.55;
+  color: var(--ink);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.emptyBody {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(26, 18, 8, 0.32);
+}
+
+.tappable {
+  cursor: pointer;
+  border-color: var(--border-strong);
+  box-shadow: 0 2px 6px rgba(26, 18, 8, 0.08);
+  transition: box-shadow 0.18s, transform 0.12s, border-color 0.18s;
+  outline: none;
+}
+
+.tappable:hover {
+  border-color: rgba(26, 18, 8, 0.28);
+  box-shadow: 0 6px 20px rgba(26, 18, 8, 0.12);
+}
+
+.tappable:focus-visible {
+  box-shadow: 0 0 0 2px rgba(26, 18, 8, 0.32);
+}
+
+.tappable:active {
+  transform: scale(0.995);
+}
+
+.tapHint {
+  margin: 4px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(26, 18, 8, 0.12);
+  text-align: right;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-dim);
+  letter-spacing: 0.01em;
+}
