@@ -57,6 +57,7 @@ export default function Board({
   onMementoRemoved,
   onMementoRestored,
   onArrangeModeChange,
+  onVisibleRectChange,
 }) {
   const [flippedId, setFlippedId] = useState(null);
   const [enteringId, setEnteringId] = useState(null);
@@ -96,7 +97,16 @@ export default function Board({
     if (!canvasRef.current) return;
     const { x, y, s } = tx.current;
     canvasRef.current.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
-  }, []);
+    const vp = viewportRef.current?.getBoundingClientRect();
+    if (vp) {
+      onVisibleRectChange?.({
+        minX: Math.max(0, (-x) / s / CANVAS_W),
+        maxX: Math.min(1, (vp.width - x) / s / CANVAS_W),
+        minY: Math.max(0, (-y) / s / CANVAS_H),
+        maxY: Math.min(1, (vp.height - y) / s / CANVAS_H),
+      });
+    }
+  }, [onVisibleRectChange]);
 
   useEffect(() => {
     mementosRef.current = mementos;

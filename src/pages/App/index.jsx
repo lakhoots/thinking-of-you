@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { usePartnership } from '../../hooks/usePartnership';
 import { useMementos } from '../../hooks/useMementos';
@@ -18,6 +18,8 @@ export default function AppShell({ user, profile, onProfileChange }) {
   const [lastAddedId, setLastAddedId] = useState(null);
   const [boardArranging, setBoardArranging] = useState(false);
   const [sparkEditing, setSparkEditing] = useState(false);
+  const [addVisibleRect, setAddVisibleRect] = useState(null);
+  const boardVisibleRectRef = useRef(null);
 
   const { partnership, partners, refresh: refreshPartnership } = usePartnership(profile.partnership_id);
   const { mementos, addLocal, updateLocal, removeLocal } = useMementos(profile.partnership_id);
@@ -32,6 +34,9 @@ export default function AppShell({ user, profile, onProfileChange }) {
   } = useSparks(profile.partnership_id);
 
   const partnerJoined = !!(partnership?.partner_a_id && partnership?.partner_b_id);
+  const setBoardVisibleRect = useCallback((rect) => {
+    boardVisibleRectRef.current = rect;
+  }, []);
 
   useEffect(() => {
     if (tab === 'sparks') refreshSparks();
@@ -55,6 +60,11 @@ export default function AppShell({ user, profile, onProfileChange }) {
 
   const openSettings = () => setShowSettings(true);
 
+  const openBoardAdd = () => {
+    setAddVisibleRect(boardVisibleRectRef.current);
+    setShowAdd(true);
+  };
+
   return (
     <>
       {tab === 'board' && (
@@ -69,6 +79,7 @@ export default function AppShell({ user, profile, onProfileChange }) {
           onMementoRemoved={removeLocal}
           onMementoRestored={addLocal}
           onArrangeModeChange={setBoardArranging}
+          onVisibleRectChange={setBoardVisibleRect}
         />
       )}
       {tab === 'sparks' && (
@@ -90,7 +101,7 @@ export default function AppShell({ user, profile, onProfileChange }) {
         <NavBar
           tab={tab}
           onTab={setTab}
-          onAdd={() => setShowAdd(true)}
+          onAdd={tab === 'board' ? openBoardAdd : () => setShowAdd(true)}
         />
       )}
 
@@ -99,6 +110,7 @@ export default function AppShell({ user, profile, onProfileChange }) {
           partnershipId={profile.partnership_id}
           authorId={user.id}
           existing={mementos}
+          visibleRect={addVisibleRect}
           onCreated={onCreated}
           onClose={() => setShowAdd(false)}
         />

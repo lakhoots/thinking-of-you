@@ -1,10 +1,101 @@
 import { supabase } from './supabase';
 import { compressImageDetailed, extForMime } from './image';
 
+const BOARD_W = 3200;
+const BOARD_H = 2600;
+const CARD_W = 138;
+const CARD_H = 170;
+const PIN_PAD_X = 0.018;
+const PIN_PAD_Y = 0.024;
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+function pinRectAt(x, y, m = {}) {
+  const scaleX = m.scale ?? 1;
+  const scaleY = m.type === 'note' ? (m.scale_y ?? scaleX) : scaleX;
+  const rotation = ((m.rotation ?? 0) * Math.PI) / 180;
+  const w = (CARD_W * scaleX) / BOARD_W;
+  const h = (CARD_H * scaleY) / BOARD_H;
+  const cos = Math.abs(Math.cos(rotation));
+  const sin = Math.abs(Math.sin(rotation));
+  const halfW = ((w * cos) + (h * sin)) / 2 + PIN_PAD_X;
+  const halfH = ((w * sin) + (h * cos)) / 2 + PIN_PAD_Y;
+  return {
+    minX: x - halfW,
+    maxX: x + halfW,
+    minY: y - halfH,
+    maxY: y + halfH,
+  };
+}
+
+function rectOverlapArea(a, b) {
+  const w = Math.max(0, Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX));
+  const h = Math.max(0, Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY));
+  return w * h;
+}
+
+function rectDistance(a, b) {
+  const dx = Math.max(0, Math.max(a.minX - b.maxX, b.minX - a.maxX));
+  const dy = Math.max(0, Math.max(a.minY - b.maxY, b.minY - a.maxY));
+  return Math.hypot(dx, dy);
+}
+
 // Pick a position for a new memento in normalized (0–1, 0–1) coords.
-// Tries to stay at least `minSpacing` away from existing items; falls back
-// to a jittered spot near the centre after enough failed attempts.
-export function pickPosition(existing, minSpacing = 0.08) {
+// If a visible board rect is provided, prefer the most spacious point inside
+// the current zoomed area; when crowded, pick the least-covering overlap.
+export function pickPosition(existing, minSpacing = 0.08, visibleRect = null, type = 'photo') {
+  if (visibleRect) {
+    const marginX = (CARD_W / BOARD_W) / 2 + PIN_PAD_X;
+    const marginY = (CARD_H / BOARD_H) / 2 + PIN_PAD_Y;
+    const rect = {
+      minX: clamp(visibleRect.minX + marginX, 0.05, 0.95),
+      maxX: clamp(visibleRect.maxX - marginX, 0.05, 0.95),
+      minY: clamp(visibleRect.minY + marginY, 0.05, 0.95),
+      maxY: clamp(visibleRect.maxY - marginY, 0.05, 0.95),
+    };
+
+    if (rect.minX <= rect.maxX && rect.minY <= rect.maxY) {
+      const existingRects = existing.map((m) => pinRectAt(m.pos_x, m.pos_y, m));
+      let best = null;
+      const candidates = [];
+      const stepsX = 7;
+      const stepsY = 7;
+
+      for (let ix = 0; ix < stepsX; ix++) {
+        for (let iy = 0; iy < stepsY; iy++) {
+          candidates.push({
+            x: rect.minX + ((ix + 0.5) / stepsX) * (rect.maxX - rect.minX),
+            y: rect.minY + ((iy + 0.5) / stepsY) * (rect.maxY - rect.minY),
+          });
+        }
+      }
+      for (let i = 0; i < 90; i++) {
+        candidates.push({
+          x: rect.minX + Math.random() * (rect.maxX - rect.minX),
+          y: rect.minY + Math.random() * (rect.maxY - rect.minY),
+        });
+      }
+
+      for (const c of candidates) {
+        for (const rotation of [-7, -4, 0, 4, 7]) {
+          const candidateRect = pinRectAt(c.x, c.y, { type, scale: 1, scale_y: 1, rotation });
+          const overlap = existingRects.reduce((sum, r) => sum + rectOverlapArea(candidateRect, r), 0);
+          const nearest = existingRects.length
+            ? Math.min(...existingRects.map((r) => rectDistance(candidateRect, r)))
+            : 1;
+          const centerBias = Math.hypot(c.x - ((rect.minX + rect.maxX) / 2), c.y - ((rect.minY + rect.maxY) / 2));
+          const rotationBias = Math.abs(rotation) * 0.0002;
+          const score = overlap * 1000 - nearest + centerBias * 0.02 + rotationBias;
+          if (!best || score < best.score) best = { ...c, rotation, score, overlap, nearest };
+        }
+      }
+
+      if (best) return { x: best.x, y: best.y, rotation: best.rotation };
+    }
+  }
+
   // Spread outward from the centre as the board fills up.
   const spread = 0.04 + existing.length * 0.025;
   for (let i = 0; i < 80; i++) {
@@ -166,6 +257,7 @@ export async function createMemento({
   emoji,
   photoFile,
   existing,
+  visibleRect,
 }) {
   // Accept a single file or an array of files for the photo path.
   const photoFiles = type === 'photo'
@@ -185,8 +277,9 @@ export async function createMemento({
     uploaded.push({ url: pub.publicUrl, hasTransparency });
   }
 
-  const { x, y } = pickPosition(existing);
-  const rotation = pickRotation();
+  const placement = pickPosition(existing, 0.08, visibleRect, type);
+  const { x, y } = placement;
+  const rotation = placement.rotation ?? pickRotation();
 
   const { data: memento, error } = await supabase
     .from('mementos')

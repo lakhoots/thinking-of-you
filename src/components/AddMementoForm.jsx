@@ -3,7 +3,7 @@ import { createMemento } from '../lib/mementos';
 import { todayStr } from '../lib/format';
 import styles from './AddMementoForm.module.css';
 
-export default function AddMementoForm({ partnershipId, authorId, existing, onCreated, onClose }) {
+export default function AddMementoForm({ partnershipId, authorId, existing, visibleRect, onCreated, onClose }) {
   const [type, setType] = useState(null);
   const [date, setDate] = useState(todayStr());
   const [title, setTitle] = useState('');
@@ -52,6 +52,7 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
         note: note.trim(),
         photoFile: photoFiles,
         existing,
+        visibleRect,
       });
       onCreated(m);
     } catch (err) {
