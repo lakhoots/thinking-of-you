@@ -48,7 +48,7 @@ export default function MementoDetailSheet({
   const photos = memento.photos?.length
     ? memento.photos
     : image_url
-      ? [{ id: 'cover', image_url, position: 0 }]
+      ? [{ id: 'cover', image_url, thumb_url: memento.thumb_url, position: 0 }]
       : [];
   const authorName = author?.name || '';
   const authorColor = author?.accent_color || '#9C5E4A';
@@ -227,7 +227,7 @@ export default function MementoDetailSheet({
           <div className={styles.editPhotos}>
             {keepPhotos.map((p) => (
               <div key={p.id} className={styles.editPhotoItem}>
-                <img src={p.image_url} alt="" />
+                <img src={p.thumb_url || p.image_url} alt="" />
                 <button
                   type="button"
                   className={styles.editPhotoRemove}

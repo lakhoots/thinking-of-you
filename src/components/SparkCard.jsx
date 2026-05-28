@@ -65,7 +65,7 @@ export default function SparkCard({
   // for legacy sparks created before spark_photos existed.
   const photos = spark.photos?.length
     ? spark.photos
-    : (spark.image_url ? [{ id: 'cover', image_url: spark.image_url, position: 0 }] : []);
+    : (spark.image_url ? [{ id: 'cover', image_url: spark.image_url, thumb_url: spark.thumb_url, position: 0 }] : []);
 
   const carouselRef = useRef(null);
   const cardRef = useRef(null);
@@ -183,7 +183,7 @@ export default function SparkCard({
             onClick={() => openLightbox(0)}
             aria-label="View photo larger"
           >
-            <img className={styles.photo} src={photos[0].image_url} alt="" />
+            <img className={styles.photo} src={photos[0].thumb_url || photos[0].image_url} alt="" loading="lazy" decoding="async" />
           </button>
         </div>
       )}
@@ -204,7 +204,7 @@ export default function SparkCard({
                     onClick={() => openLightbox(i)}
                     aria-label="View photo larger"
                   >
-                    <img src={p.image_url} alt="" />
+                    <img src={p.thumb_url || p.image_url} alt="" loading="lazy" decoding="async" />
                   </button>
                 </div>
               ))}

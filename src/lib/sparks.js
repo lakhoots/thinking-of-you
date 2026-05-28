@@ -1,10 +1,10 @@
 import { supabase } from './supabase';
-import { compressImageDetailed, extForMime } from './image';
+import { compressImageWithThumb, extForMime } from './image';
 
 export async function listSparks(partnershipId) {
   let { data, error } = await supabase
     .from('sparks')
-    .select('*, photos:spark_photos(id, image_url, position), comments:spark_comments(id, spark_id, author_id, body, created_at), views:spark_views(id, spark_id, user_id, seen_at)')
+    .select('*, photos:spark_photos(id, image_url, thumb_url, position), comments:spark_comments(id, spark_id, author_id, body, created_at), views:spark_views(id, spark_id, user_id, seen_at)')
     .eq('partnership_id', partnershipId)
     .order('created_at', { ascending: false });
 
@@ -16,7 +16,7 @@ export async function listSparks(partnershipId) {
   )) {
     const fallback = await supabase
       .from('sparks')
-      .select('*, photos:spark_photos(id, image_url, position), comments:spark_comments(id, spark_id, author_id, body, created_at)')
+      .select('*, photos:spark_photos(id, image_url, thumb_url, position), comments:spark_comments(id, spark_id, author_id, body, created_at)')
       .eq('partnership_id', partnershipId)
       .order('created_at', { ascending: false });
     data = fallback.data;
@@ -30,7 +30,7 @@ export async function listSparks(partnershipId) {
   )) {
     const fallback = await supabase
       .from('sparks')
-      .select('*, photos:spark_photos(id, image_url, position)')
+      .select('*, photos:spark_photos(id, image_url, thumb_url, position)')
       .eq('partnership_id', partnershipId)
       .order('created_at', { ascending: false });
     data = fallback.data;
@@ -53,7 +53,7 @@ export async function listSparks(partnershipId) {
 export async function fetchSparkPhotos(sparkId) {
   const { data, error } = await supabase
     .from('spark_photos')
-    .select('id, image_url, position')
+    .select('id, image_url, thumb_url, position')
     .eq('spark_id', sparkId)
     .order('position', { ascending: true });
   if (error) throw error;
@@ -63,15 +63,22 @@ export async function fetchSparkPhotos(sparkId) {
 async function uploadPhotos(partnershipId, files) {
   const uploaded = [];
   for (const file of files) {
-    const { blob } = await compressImageDetailed(file);
+    const { blob, thumbBlob } = await compressImageWithThumb(file);
     const ext = extForMime(blob.type);
-    const path = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+    const base = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const path = `${base}.${ext}`;
+    const thumbPath = `${base}-thumb.${ext}`;
     const { error: upErr } = await supabase.storage
       .from('sparks')
       .upload(path, blob, { contentType: blob.type, upsert: false });
     if (upErr) throw upErr;
+    const { error: thumbErr } = await supabase.storage
+      .from('sparks')
+      .upload(thumbPath, thumbBlob, { contentType: thumbBlob.type, upsert: false });
+    if (thumbErr) throw thumbErr;
     const { data: pub } = supabase.storage.from('sparks').getPublicUrl(path);
-    uploaded.push(pub.publicUrl);
+    const { data: thumbPub } = supabase.storage.from('sparks').getPublicUrl(thumbPath);
+    uploaded.push({ url: pub.publicUrl, thumbUrl: thumbPub.publicUrl });
   }
   return uploaded;
 }
@@ -93,7 +100,8 @@ export async function createSpark({
       author_id: authorId,
       note: note.trim(),
       date,
-      image_url: uploaded[0] ?? null,
+      image_url: uploaded[0]?.url ?? null,
+      thumb_url: uploaded[0]?.thumbUrl ?? null,
     })
     .select()
     .single();
@@ -101,15 +109,16 @@ export async function createSpark({
 
   let photos = [];
   if (uploaded.length) {
-    const rows = uploaded.map((url, i) => ({
+    const rows = uploaded.map((u, i) => ({
       spark_id: spark.id,
-      image_url: url,
+      image_url: u.url,
+      thumb_url: u.thumbUrl,
       position: i,
     }));
     const { data: photoRows, error: pErr } = await supabase
       .from('spark_photos')
       .insert(rows)
-      .select('id, image_url, position');
+      .select('id, image_url, thumb_url, position');
     if (pErr) throw pErr;
     photos = (photoRows ?? []).slice().sort((a, b) => a.position - b.position);
   }
@@ -156,9 +165,10 @@ export async function updateSpark({
 
   if (uploaded.length) {
     const startPos = keepPhotoIds?.length ?? 0;
-    const rows = uploaded.map((url, i) => ({
+    const rows = uploaded.map((u, i) => ({
       spark_id: sparkId,
-      image_url: url,
+      image_url: u.url,
+      thumb_url: u.thumbUrl,
       position: startPos + i,
     }));
     const { error: pErr } = await supabase.from('spark_photos').insert(rows);
@@ -169,6 +179,7 @@ export async function updateSpark({
   const finalPatch = { ...patch };
   if (keepPhotoIds || uploaded.length) {
     finalPatch.image_url = photos[0]?.image_url ?? null;
+    finalPatch.thumb_url = photos[0]?.thumb_url ?? null;
   }
 
   const { data: updated, error: sErr } = await supabase
