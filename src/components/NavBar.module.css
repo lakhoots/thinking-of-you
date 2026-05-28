@@ -33,9 +33,24 @@
 .icon {
   font-size: 17px;
   color: var(--chain-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab.on .icon { color: rgba(240,230,208,0.88); }
+
+/* Middle tab sits below the floating + button.
+   Pad its content down so the icon clears the FAB. */
+.tabCenter {
+  padding-top: 26px;
+  padding-bottom: 6px;
+  gap: 2px;
+}
+
+.iconCenter {
+  font-size: 14px;
+}
 
 .addWrap {
   position: absolute;

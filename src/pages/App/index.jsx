@@ -3,12 +3,15 @@ import { supabase } from '../../lib/supabase';
 import { usePartnership } from '../../hooks/usePartnership';
 import { useMementos } from '../../hooks/useMementos';
 import { useSparks } from '../../hooks/useSparks';
+import { useFavorites } from '../../hooks/useFavorites';
 import NavBar from '../../components/NavBar';
 import AddMementoForm from '../../components/AddMementoForm';
 import AddSparkForm from '../../components/AddSparkForm';
+import AddFavoriteForm from '../../components/AddFavoriteForm';
 import SettingsSheet from '../../components/SettingsSheet';
 import Board from './Board';
 import Sparks from './Sparks';
+import Favorites from './Favorites';
 import shellStyles from './AppShell.module.css';
 
 export default function AppShell({ user, profile, onProfileChange }) {
@@ -18,6 +21,7 @@ export default function AppShell({ user, profile, onProfileChange }) {
   const [lastAddedId, setLastAddedId] = useState(null);
   const [boardArranging, setBoardArranging] = useState(false);
   const [sparkEditing, setSparkEditing] = useState(false);
+  const [favoriteEditing, setFavoriteEditing] = useState(false);
 
   const { partnership, partners, refresh: refreshPartnership } = usePartnership(profile.partnership_id);
   const { mementos, addLocal, updateLocal, removeLocal } = useMementos(profile.partnership_id);
@@ -30,12 +34,20 @@ export default function AppShell({ user, profile, onProfileChange }) {
     removeLocal: removeSparkLocal,
     refresh: refreshSparks,
   } = useSparks(profile.partnership_id);
+  const {
+    favorites,
+    addLocal: addFavoriteLocal,
+    updateLocal: updateFavoriteLocal,
+    removeLocal: removeFavoriteLocal,
+    refresh: refreshFavorites,
+  } = useFavorites(profile.partnership_id);
 
   const partnerJoined = !!(partnership?.partner_a_id && partnership?.partner_b_id);
 
   useEffect(() => {
     if (tab === 'sparks') refreshSparks();
-  }, [tab, refreshSparks]);
+    if (tab === 'favorites') refreshFavorites();
+  }, [tab, refreshSparks, refreshFavorites]);
 
   // If the partnership has only one member, show the waiting state instead of the app.
   if (partnership && !partnerJoined) {
@@ -50,6 +62,11 @@ export default function AppShell({ user, profile, onProfileChange }) {
 
   const onSparkCreated = (s) => {
     addSparkLocal(s);
+    setShowAdd(false);
+  };
+
+  const onFavoriteCreated = (f) => {
+    addFavoriteLocal(f);
     setShowAdd(false);
   };
 
@@ -85,8 +102,23 @@ export default function AppShell({ user, profile, onProfileChange }) {
           onEditOpenChange={setSparkEditing}
         />
       )}
+      {tab === 'favorites' && (
+        <Favorites
+          favorites={favorites}
+          partners={partners}
+          currentUserProfile={profile}
+          onOpenSettings={openSettings}
+          onFavoriteUpdated={updateFavoriteLocal}
+          onFavoriteRemoved={removeFavoriteLocal}
+          onFavoriteRestored={addFavoriteLocal}
+          onEditOpenChange={setFavoriteEditing}
+        />
+      )}
 
-      {!boardArranging && !sparkEditing && !(showAdd && tab === 'sparks') && (
+      {!boardArranging
+        && !sparkEditing
+        && !favoriteEditing
+        && !(showAdd && (tab === 'sparks' || tab === 'favorites')) && (
         <NavBar
           tab={tab}
           onTab={setTab}
@@ -109,6 +141,15 @@ export default function AppShell({ user, profile, onProfileChange }) {
           partnershipId={profile.partnership_id}
           authorId={user.id}
           onCreated={onSparkCreated}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {showAdd && tab === 'favorites' && (
+        <AddFavoriteForm
+          partnershipId={profile.partnership_id}
+          authorId={user.id}
+          onCreated={onFavoriteCreated}
           onClose={() => setShowAdd(false)}
         />
       )}

@@ -1,5 +1,6 @@
 import styles from './NavBar.module.css';
 import { BoardIcon } from './BoardIcon';
+import { HeartIcon } from './HeartIcon';
 
 export default function NavBar({ tab, onTab, onAdd }) {
   return (
@@ -12,7 +13,15 @@ export default function NavBar({ tab, onTab, onAdd }) {
         <span>Sparks</span>
       </div>
 
-      <div style={{ width: 60 }} />
+      <div
+        className={`${styles.tab} ${styles.tabCenter} ${tab === 'favorites' ? styles.on : ''}`}
+        onClick={() => onTab('favorites')}
+      >
+        <div className={`${styles.icon} ${styles.iconCenter}`}>
+          <HeartIcon size={14} />
+        </div>
+        <span>Favorites</span>
+      </div>
 
       <div
         className={`${styles.tab} ${tab === 'board' ? styles.on : ''}`}
