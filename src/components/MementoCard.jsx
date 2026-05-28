@@ -65,7 +65,7 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
             {type === 'photo' && (
               <>
                 <div className={styles.img}>
-                  {image_url ? <img src={image_url} alt="" draggable={false} /> : <span className={styles.placeholder}>📷</span>}
+                  {image_url ? <img src={image_url} alt="" draggable={false} loading="lazy" decoding="async" /> : <span className={styles.placeholder}>📷</span>}
                 </div>
                 {!borderless && (
                   <div className={styles.footer}>
@@ -113,7 +113,7 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
               <div className={styles.backThumbs}>
                 {visibleThumbs.map((p) => (
                   <div key={p.id} className={styles.backThumb}>
-                    <img src={p.image_url} alt="" draggable={false} />
+                    <img src={p.image_url} alt="" draggable={false} loading="lazy" decoding="async" />
                   </div>
                 ))}
                 {overflow > 0 && (

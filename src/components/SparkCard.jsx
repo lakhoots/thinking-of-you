@@ -183,7 +183,7 @@ export default function SparkCard({
             onClick={() => openLightbox(0)}
             aria-label="View photo larger"
           >
-            <img className={styles.photo} src={photos[0].image_url} alt="" />
+            <img className={styles.photo} src={photos[0].image_url} alt="" loading="lazy" decoding="async" />
           </button>
         </div>
       )}
@@ -204,7 +204,7 @@ export default function SparkCard({
                     onClick={() => openLightbox(i)}
                     aria-label="View photo larger"
                   >
-                    <img src={p.image_url} alt="" />
+                    <img src={p.image_url} alt="" loading="lazy" decoding="async" />
                   </button>
                 </div>
               ))}
