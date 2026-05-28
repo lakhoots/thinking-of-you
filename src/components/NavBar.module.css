@@ -40,43 +40,27 @@
 
 .tab.on .icon { color: rgba(240,230,208,0.88); }
 
-/* Middle tab sits below the floating + button.
-   Pad its content down so the icon clears the FAB. */
-.tabCenter {
-  padding-top: 26px;
-  padding-bottom: 6px;
-  gap: 2px;
-}
-
-.iconCenter {
-  font-size: 14px;
-}
-
-.addWrap {
-  position: absolute;
-  left: 50%;
-  top: -22px;
-  transform: translateX(-50%);
-  z-index: 101;
-}
-
 .addBtn {
-  width: 44px;
-  height: 44px;
+  position: fixed;
+  right: calc(var(--vv-x, 0px) + 18px);
+  top: calc(var(--vv-y, 0px) + var(--vv-h, 100vh) - 72px - 16px - 52px);
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--chain);
-  color: rgba(240,230,208,0.95);
-  border: 3px solid var(--bg-raised);
+  color: rgba(240, 230, 208, 0.95);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 300;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(26,18,8,0.35);
+  box-shadow: 0 8px 22px rgba(26, 18, 8, 0.34), 0 2px 6px rgba(26, 18, 8, 0.2);
   font-family: var(--sans);
   line-height: 1;
+  z-index: 101;
   transition: transform 0.18s;
 }
 
-.addBtn:active { transform: scale(1.12); }
+.addBtn:active { transform: scale(0.94); }
