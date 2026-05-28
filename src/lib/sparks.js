@@ -67,18 +67,27 @@ async function uploadPhotos(partnershipId, files) {
     const ext = extForMime(blob.type);
     const base = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const path = `${base}.${ext}`;
-    const thumbPath = `${base}-thumb.${ext}`;
     const { error: upErr } = await supabase.storage
       .from('sparks')
       .upload(path, blob, { contentType: blob.type, upsert: false });
     if (upErr) throw upErr;
-    const { error: thumbErr } = await supabase.storage
-      .from('sparks')
-      .upload(thumbPath, thumbBlob, { contentType: thumbBlob.type, upsert: false });
-    if (thumbErr) throw thumbErr;
     const { data: pub } = supabase.storage.from('sparks').getPublicUrl(path);
-    const { data: thumbPub } = supabase.storage.from('sparks').getPublicUrl(thumbPath);
-    uploaded.push({ url: pub.publicUrl, thumbUrl: thumbPub.publicUrl });
+
+    // The thumbnail is optional — if it didn't generate or fails to upload,
+    // post the full image with no thumb_url and let the UI fall back to it.
+    let thumbUrl = null;
+    if (thumbBlob) {
+      const thumbPath = `${base}-thumb.${ext}`;
+      const { error: thumbErr } = await supabase.storage
+        .from('sparks')
+        .upload(thumbPath, thumbBlob, { contentType: thumbBlob.type, upsert: false });
+      if (thumbErr) {
+        console.warn('spark thumbnail upload failed; using full image', thumbErr);
+      } else {
+        thumbUrl = supabase.storage.from('sparks').getPublicUrl(thumbPath).data.publicUrl;
+      }
+    }
+    uploaded.push({ url: pub.publicUrl, thumbUrl });
   }
   return uploaded;
 }

@@ -1,4 +1,5 @@
 import { fmtDate } from '../lib/format';
+import { fallbackToFull } from '../lib/thumbFallback';
 import styles from './MementoCard.module.css';
 
 const CARD_W = 138;
@@ -65,7 +66,7 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
             {type === 'photo' && (
               <>
                 <div className={styles.img}>
-                  {image_url ? <img src={thumb_url || image_url} alt="" draggable={false} loading="lazy" decoding="async" /> : <span className={styles.placeholder}>📷</span>}
+                  {image_url ? <img src={thumb_url || image_url} alt="" draggable={false} loading="lazy" decoding="async" onError={fallbackToFull(image_url)} /> : <span className={styles.placeholder}>📷</span>}
                 </div>
                 {!borderless && (
                   <div className={styles.footer}>
@@ -113,7 +114,7 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
               <div className={styles.backThumbs}>
                 {visibleThumbs.map((p) => (
                   <div key={p.id} className={styles.backThumb}>
-                    <img src={p.thumb_url || p.image_url} alt="" draggable={false} loading="lazy" decoding="async" />
+                    <img src={p.thumb_url || p.image_url} alt="" draggable={false} loading="lazy" decoding="async" onError={fallbackToFull(p.image_url)} />
                   </div>
                 ))}
                 {overflow > 0 && (

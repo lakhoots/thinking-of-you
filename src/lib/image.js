@@ -42,8 +42,17 @@ export async function compressImageWithThumb(file, {
   const hasTransparency = preserveAlpha && hasTransparentEdges(full.ctx, full.w, full.h);
   const blob = await canvasToBlob(full.canvas, outMime, preserveAlpha ? undefined : quality);
 
-  const thumb = drawScaled(img, thumbDim);
-  const thumbBlob = await canvasToBlob(thumb.canvas, outMime, preserveAlpha ? undefined : thumbQuality);
+  // The thumbnail is an optimization, not a requirement. If the browser
+  // hands back an empty/invalid blob (some iOS Safari versions do this on
+  // large canvases), degrade to no thumbnail rather than failing the whole
+  // upload — the full image still posts and the UI falls back to it.
+  let thumbBlob = null;
+  try {
+    const thumb = drawScaled(img, thumbDim);
+    thumbBlob = await canvasToBlob(thumb.canvas, outMime, preserveAlpha ? undefined : thumbQuality);
+  } catch {
+    // Leave thumbBlob null — the thumbnail is optional and we fall back to full.
+  }
 
   return { blob, thumbBlob, hasTransparency };
 }
@@ -87,7 +96,7 @@ function drawScaled(img, maxDim) {
 function canvasToBlob(canvas, mime, quality) {
   return new Promise((resolve, reject) => {
     canvas.toBlob(
-      (blob) => (blob ? resolve(blob) : reject(new Error('compress failed'))),
+      (blob) => (blob && blob.size > 0 ? resolve(blob) : reject(new Error('compress failed'))),
       mime,
       quality,
     );

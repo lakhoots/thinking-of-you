@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createSparkComment, markSparkSeen } from '../lib/sparks';
 import PhotoLightbox from './PhotoLightbox';
+import { fallbackToFull } from '../lib/thumbFallback';
 import styles from './SparkCard.module.css';
 
 function fmtTime(iso) {
@@ -183,7 +184,7 @@ export default function SparkCard({
             onClick={() => openLightbox(0)}
             aria-label="View photo larger"
           >
-            <img className={styles.photo} src={photos[0].thumb_url || photos[0].image_url} alt="" loading="lazy" decoding="async" />
+            <img className={styles.photo} src={photos[0].thumb_url || photos[0].image_url} alt="" loading="lazy" decoding="async" onError={fallbackToFull(photos[0].image_url)} />
           </button>
         </div>
       )}
@@ -204,7 +205,7 @@ export default function SparkCard({
                     onClick={() => openLightbox(i)}
                     aria-label="View photo larger"
                   >
-                    <img src={p.thumb_url || p.image_url} alt="" loading="lazy" decoding="async" />
+                    <img src={p.thumb_url || p.image_url} alt="" loading="lazy" decoding="async" onError={fallbackToFull(p.image_url)} />
                   </button>
                 </div>
               ))}
