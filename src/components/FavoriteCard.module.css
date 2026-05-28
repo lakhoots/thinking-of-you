@@ -84,12 +84,15 @@
 
 .tappable {
   cursor: pointer;
-  transition: box-shadow 0.18s, transform 0.12s;
+  border-color: var(--border-strong);
+  box-shadow: 0 2px 6px rgba(26, 18, 8, 0.08);
+  transition: box-shadow 0.18s, transform 0.12s, border-color 0.18s;
   outline: none;
 }
 
 .tappable:hover {
-  box-shadow: 0 4px 18px rgba(26, 18, 8, 0.1);
+  border-color: rgba(26, 18, 8, 0.28);
+  box-shadow: 0 6px 20px rgba(26, 18, 8, 0.12);
 }
 
 .tappable:focus-visible {
@@ -98,4 +101,16 @@
 
 .tappable:active {
   transform: scale(0.995);
+}
+
+.tapHint {
+  margin: 4px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(26, 18, 8, 0.12);
+  text-align: right;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 12px;
+  color: var(--ink-dim);
+  letter-spacing: 0.01em;
 }

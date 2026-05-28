@@ -14,10 +14,10 @@ function EmptyCard({ author, isMine, onTap }) {
   const name = isMine ? 'You' : (author?.name || 'Someone');
   const accent = author?.accent_color || '#9C5E4A';
   const initial = (author?.name?.[0] || '?').toUpperCase();
-  const placeholder = isMine
-    ? 'nothing from you yet.'
-    : `nothing from ${author?.name || 'them'} yet.`;
   const tappable = !!onTap;
+  const placeholder = isMine
+    ? (tappable ? 'tap to share your first favorite.' : 'nothing from you yet.')
+    : `nothing from ${author?.name || 'them'} yet.`;
   const onKeyDown = tappable
     ? (e) => {
         if (e.key === 'Enter' || e.key === ' ') {

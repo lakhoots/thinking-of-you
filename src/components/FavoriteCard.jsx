@@ -55,6 +55,7 @@ export default function FavoriteCard({ favorite, author, isMine, onTap }) {
 
       <p className={styles.prompt}>right now, my favorite thing about you is</p>
       <p className={styles.body}>{favorite.body}</p>
+      {tappable && <p className={styles.tapHint}>tap to update →</p>}
     </article>
   );
 }
