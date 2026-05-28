@@ -36,4 +36,10 @@
 
   /* Shadows */
   --shadow-card: 0 4px 20px rgba(26,18,8,0.12), 0 1px 4px rgba(26,18,8,0.06);
+
+  /* Chrome heights — referenced from every page so the nav and header
+     stay in sync. The nav extends behind the iOS home indicator via
+     safe-area-inset-bottom; pages subtract it from their viewport. */
+  --header-h: 44px;
+  --nav-h: 80px;
 }
