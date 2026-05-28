@@ -1,8 +1,8 @@
 .nav {
   position: fixed;
-  top: calc(var(--vv-y, 0px) + var(--vv-h, 100vh) - var(--nav-h) - env(safe-area-inset-bottom, 0px));
-  left: var(--vv-x, 0px);
-  width: var(--vv-w, 100%);
+  top: calc(var(--chrome-y, 0px) + var(--chrome-h, 100vh) - var(--nav-h) - env(safe-area-inset-bottom, 0px));
+  left: var(--chrome-x, 0px);
+  width: var(--chrome-w, 100%);
   height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
   padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--chain);
@@ -43,8 +43,8 @@
 
 .addBtn {
   position: fixed;
-  right: calc(var(--vv-x, 0px) + 18px);
-  top: calc(var(--vv-y, 0px) + var(--vv-h, 100vh) - var(--nav-h) - env(safe-area-inset-bottom, 0px) - 16px - 52px);
+  right: calc(var(--chrome-x, 0px) + 18px);
+  top: calc(var(--chrome-y, 0px) + var(--chrome-h, 100vh) - var(--nav-h) - env(safe-area-inset-bottom, 0px) - 16px - 52px);
   width: 52px;
   height: 52px;
   border-radius: 50%;

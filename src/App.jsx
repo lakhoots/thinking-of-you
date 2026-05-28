@@ -75,6 +75,17 @@ export default function App() {
       root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
       root.style.setProperty('--vv-w', `${vv.width}px`);
       root.style.setProperty('--vv-h', `${vv.height}px`);
+
+      // Bottom chrome (nav bar + FAB) should follow the visual viewport only
+      // while pinch-zoomed. When the on-screen keyboard shrinks the visual
+      // viewport (scale stays ~1), keep the chrome pinned to the layout
+      // viewport bottom so the keyboard covers it — otherwise the FAB rides up
+      // and collides with input controls like the comment Send button.
+      const zoomed = vv.scale > 1.01;
+      root.style.setProperty('--chrome-x', zoomed ? `${vv.offsetLeft}px` : '0px');
+      root.style.setProperty('--chrome-y', zoomed ? `${vv.offsetTop}px` : '0px');
+      root.style.setProperty('--chrome-w', zoomed ? `${vv.width}px` : `${window.innerWidth}px`);
+      root.style.setProperty('--chrome-h', zoomed ? `${vv.height}px` : `${window.innerHeight}px`);
     };
     update();
     vv.addEventListener('resize', update);
