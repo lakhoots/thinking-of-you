@@ -5,7 +5,7 @@ const CARD_W = 138;
 const CARD_H = 170;
 
 export default function MementoCard({ memento, author, flipped, entering, x, y, rotationOverride, scaleOverride, scaleYOverride, onOpenDetail, arrangeMode, dragging, selected }) {
-  const { type, image_url, title, note, emoji, date, rotation: baseRotation, scale: baseScale, scale_y: baseScaleY, has_transparency: hasTransparency } = memento;
+  const { type, image_url, thumb_url, title, note, emoji, date, rotation: baseRotation, scale: baseScale, scale_y: baseScaleY, has_transparency: hasTransparency } = memento;
   const rotation = rotationOverride ?? baseRotation;
   const scaleX = scaleOverride ?? baseScale ?? 1;
   const scaleY = scaleYOverride ?? baseScaleY ?? 1;
@@ -30,7 +30,7 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
   const thumbs = memento.photos?.length
     ? memento.photos
     : image_url
-      ? [{ id: 'cover', image_url }]
+      ? [{ id: 'cover', image_url, thumb_url }]
       : [];
   const visibleThumbs = thumbs.slice(0, 4);
   const overflow = Math.max(0, thumbs.length - visibleThumbs.length);
@@ -65,7 +65,7 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
             {type === 'photo' && (
               <>
                 <div className={styles.img}>
-                  {image_url ? <img src={image_url} alt="" draggable={false} loading="lazy" decoding="async" /> : <span className={styles.placeholder}>📷</span>}
+                  {image_url ? <img src={thumb_url || image_url} alt="" draggable={false} loading="lazy" decoding="async" /> : <span className={styles.placeholder}>📷</span>}
                 </div>
                 {!borderless && (
                   <div className={styles.footer}>
@@ -113,7 +113,7 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
               <div className={styles.backThumbs}>
                 {visibleThumbs.map((p) => (
                   <div key={p.id} className={styles.backThumb}>
-                    <img src={p.image_url} alt="" draggable={false} loading="lazy" decoding="async" />
+                    <img src={p.thumb_url || p.image_url} alt="" draggable={false} loading="lazy" decoding="async" />
                   </div>
                 ))}
                 {overflow > 0 && (

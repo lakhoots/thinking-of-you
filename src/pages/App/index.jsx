@@ -4,6 +4,7 @@ import { usePartnership } from '../../hooks/usePartnership';
 import { useMementos } from '../../hooks/useMementos';
 import { useSparks } from '../../hooks/useSparks';
 import { useFavorites } from '../../hooks/useFavorites';
+import { backfillThumbnails } from '../../lib/backfillThumbs';
 import NavBar from '../../components/NavBar';
 import AddMementoForm from '../../components/AddMementoForm';
 import AddSparkForm from '../../components/AddSparkForm';
@@ -25,9 +26,10 @@ export default function AppShell({ user, profile, onProfileChange }) {
   const boardVisibleRectRef = useRef(null);
 
   const { partnership, partners, refresh: refreshPartnership } = usePartnership(profile.partnership_id);
-  const { mementos, addLocal, updateLocal, removeLocal } = useMementos(profile.partnership_id);
+  const { mementos, loading: mementosLoading, addLocal, updateLocal, removeLocal } = useMementos(profile.partnership_id);
   const {
     sparks,
+    loading: sparksLoading,
     addLocal: addSparkLocal,
     updateLocal: updateSparkLocal,
     addCommentLocal: addSparkCommentLocal,
@@ -45,6 +47,17 @@ export default function AppShell({ user, profile, onProfileChange }) {
   const setBoardVisibleRect = useCallback((rect) => {
     boardVisibleRectRef.current = rect;
   }, []);
+
+  // One-time pass to generate thumbnails for content created before
+  // thumb_url existed. Runs once both lists have loaded; realtime updates
+  // refresh the board/feed as each thumb lands.
+  const backfilledRef = useRef(false);
+  useEffect(() => {
+    if (backfilledRef.current || mementosLoading || sparksLoading) return;
+    backfilledRef.current = true;
+    backfillThumbnails({ mementos, sparks, currentUserId: user.id })
+      .catch((err) => console.warn('thumb backfill', err));
+  }, [mementosLoading, sparksLoading, mementos, sparks, user.id]);
 
   useEffect(() => {
     if (tab === 'sparks') refreshSparks();

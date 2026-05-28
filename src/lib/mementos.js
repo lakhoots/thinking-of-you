@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import { compressImageDetailed, extForMime } from './image';
+import { compressImageWithThumb, extForMime } from './image';
 
 const BOARD_W = 3200;
 const BOARD_H = 2600;
@@ -10,6 +10,25 @@ const PIN_PAD_Y = 0.024;
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
+}
+
+async function uploadMementoPhoto(partnershipId, file) {
+  const { blob, thumbBlob, hasTransparency } = await compressImageWithThumb(file);
+  const ext = extForMime(blob.type);
+  const base = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const path = `${base}.${ext}`;
+  const thumbPath = `${base}-thumb.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from('mementos')
+    .upload(path, blob, { contentType: blob.type, upsert: false });
+  if (upErr) throw upErr;
+  const { error: thumbErr } = await supabase.storage
+    .from('mementos')
+    .upload(thumbPath, thumbBlob, { contentType: thumbBlob.type, upsert: false });
+  if (thumbErr) throw thumbErr;
+  const { data: pub } = supabase.storage.from('mementos').getPublicUrl(path);
+  const { data: thumbPub } = supabase.storage.from('mementos').getPublicUrl(thumbPath);
+  return { url: pub.publicUrl, thumbUrl: thumbPub.publicUrl, hasTransparency };
 }
 
 function pinRectAt(x, y, m = {}) {
@@ -125,7 +144,7 @@ export function pickRotation() {
 export async function listMementos(partnershipId) {
   const { data, error } = await supabase
     .from('mementos')
-    .select('*, photos:memento_photos(id, image_url, position, has_transparency)')
+    .select('*, photos:memento_photos(id, image_url, thumb_url, position, has_transparency)')
     .eq('partnership_id', partnershipId)
     .order('created_at', { ascending: true });
   if (error) throw error;
@@ -138,7 +157,7 @@ export async function listMementos(partnershipId) {
 export async function fetchMementoPhotos(mementoId) {
   const { data, error } = await supabase
     .from('memento_photos')
-    .select('id, image_url, position, has_transparency')
+    .select('id, image_url, thumb_url, position, has_transparency')
     .eq('memento_id', mementoId)
     .order('position', { ascending: true });
   if (error) throw error;
@@ -160,15 +179,7 @@ export async function updateMemento({
   // 1. Upload any new files.
   const uploaded = [];
   for (const file of newPhotoFiles ?? []) {
-    const { blob, hasTransparency } = await compressImageDetailed(file);
-    const ext = extForMime(blob.type);
-    const path = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from('mementos')
-      .upload(path, blob, { contentType: blob.type, upsert: false });
-    if (upErr) throw upErr;
-    const { data: pub } = supabase.storage.from('mementos').getPublicUrl(path);
-    uploaded.push({ url: pub.publicUrl, hasTransparency });
+    uploaded.push(await uploadMementoPhoto(partnershipId, file));
   }
 
   // 2. Delete photos the caller dropped.
@@ -206,6 +217,7 @@ export async function updateMemento({
     const rows = uploaded.map((u, i) => ({
       memento_id: mementoId,
       image_url: u.url,
+      thumb_url: u.thumbUrl,
       position: startPos + i,
       has_transparency: u.hasTransparency,
     }));
@@ -219,6 +231,7 @@ export async function updateMemento({
   const finalPatch = { ...patch };
   if (keepPhotoIds || uploaded.length) {
     finalPatch.image_url = photos[0]?.image_url ?? null;
+    finalPatch.thumb_url = photos[0]?.thumb_url ?? null;
     finalPatch.has_transparency = photos[0]?.has_transparency ?? false;
   }
 
@@ -266,15 +279,7 @@ export async function createMemento({
 
   const uploaded = [];
   for (const file of photoFiles) {
-    const { blob, hasTransparency } = await compressImageDetailed(file);
-    const ext = extForMime(blob.type);
-    const path = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from('mementos')
-      .upload(path, blob, { contentType: blob.type, upsert: false });
-    if (upErr) throw upErr;
-    const { data: pub } = supabase.storage.from('mementos').getPublicUrl(path);
-    uploaded.push({ url: pub.publicUrl, hasTransparency });
+    uploaded.push(await uploadMementoPhoto(partnershipId, file));
   }
 
   const placement = pickPosition(existing, 0.08, visibleRect, type);
@@ -291,6 +296,7 @@ export async function createMemento({
       title: title || null,
       note: note || null,
       image_url: uploaded[0]?.url ?? null, // cover (denormalized) for fast board render
+      thumb_url: uploaded[0]?.thumbUrl ?? null, // small cover for the board pin
       emoji: emoji || null,
       pos_x: x,
       pos_y: y,
@@ -306,13 +312,14 @@ export async function createMemento({
     const rows = uploaded.map((u, i) => ({
       memento_id: memento.id,
       image_url: u.url,
+      thumb_url: u.thumbUrl,
       position: i,
       has_transparency: u.hasTransparency,
     }));
     const { data: photoRows, error: pErr } = await supabase
       .from('memento_photos')
       .insert(rows)
-      .select('id, image_url, position, has_transparency');
+      .select('id, image_url, thumb_url, position, has_transparency');
     if (pErr) throw pErr;
     photos = (photoRows ?? []).slice().sort((a, b) => a.position - b.position);
   }
