@@ -39,10 +39,6 @@ export default function AppShell({ user, profile, onProfileChange }) {
     refresh: refreshFavorites,
   } = useFavorites(profile.partnership_id);
 
-  // Favorites is sorted desc by created_at — the first row by the current
-  // user is their "current" favorite, used to flip the form copy.
-  const hasMyFavorite = favorites.some((f) => f.author_id === user.id);
-
   const partnerJoined = !!(partnership?.partner_a_id && partnership?.partner_b_id);
 
   useEffect(() => {
@@ -145,7 +141,6 @@ export default function AppShell({ user, profile, onProfileChange }) {
         <AddFavoriteForm
           partnershipId={profile.partnership_id}
           authorId={user.id}
-          isReplacing={hasMyFavorite}
           onCreated={onFavoriteCreated}
           onClose={() => setShowAdd(false)}
         />

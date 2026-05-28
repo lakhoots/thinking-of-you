@@ -8,7 +8,6 @@ import styles from './AddFavoriteForm.module.css';
 export default function AddFavoriteForm({
   partnershipId,
   authorId,
-  isReplacing,
   onCreated,
   onClose,
 }) {
@@ -58,9 +57,7 @@ export default function AddFavoriteForm({
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
         <div className={styles.handle} />
-        <div className={styles.title}>
-          {isReplacing ? 'Update your favorite' : 'Share your favorite'}
-        </div>
+        <div className={styles.title}>Update your favorite</div>
 
         <p className={styles.prompt}>right now, my favorite thing about you is</p>
 
@@ -81,7 +78,7 @@ export default function AddFavoriteForm({
         {error && <div className={styles.error}>{error}</div>}
 
         <button className={styles.submit} disabled={!canSubmit} onClick={submit}>
-          {busy ? 'Sharing…' : 'Share →'}
+          {busy ? 'Pushing…' : 'Push your updated favorite →'}
         </button>
       </div>
     </div>
