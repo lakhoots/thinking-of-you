@@ -15,13 +15,30 @@ function relativeWhen(iso) {
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-export default function FavoriteCard({ favorite, author, isMine }) {
+export default function FavoriteCard({ favorite, author, isMine, onTap }) {
   const displayName = isMine ? 'You' : (author?.name || 'Someone');
   const accent = author?.accent_color || '#9C5E4A';
   const initial = (author?.name?.[0] || '?').toUpperCase();
+  const tappable = !!onTap;
+
+  const onKeyDown = tappable
+    ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onTap();
+        }
+      }
+    : undefined;
 
   return (
-    <article className={styles.card}>
+    <article
+      className={`${styles.card} ${tappable ? styles.tappable : ''}`}
+      onClick={tappable ? onTap : undefined}
+      role={tappable ? 'button' : undefined}
+      tabIndex={tappable ? 0 : undefined}
+      onKeyDown={onKeyDown}
+      aria-label={tappable ? 'Update your favorite' : undefined}
+    >
       <header className={styles.head}>
         <div
           className={styles.avatar}

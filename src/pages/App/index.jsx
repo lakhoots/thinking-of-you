@@ -105,6 +105,7 @@ export default function AppShell({ user, profile, onProfileChange }) {
           partners={partners}
           currentUserProfile={profile}
           onOpenSettings={openSettings}
+          onUpdateRequest={() => setShowAdd(true)}
         />
       )}
 

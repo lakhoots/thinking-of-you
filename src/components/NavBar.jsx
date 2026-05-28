@@ -31,13 +31,15 @@ export default function NavBar({ tab, onTab, onAdd }) {
         </div>
       </div>
 
-      <button
-        className={styles.addBtn}
-        onClick={onAdd}
-        aria-label="Add"
-      >
-        +
-      </button>
+      {tab !== 'favorites' && (
+        <button
+          className={styles.addBtn}
+          onClick={onAdd}
+          aria-label="Add"
+        >
+          +
+        </button>
+      )}
     </>
   );
 }

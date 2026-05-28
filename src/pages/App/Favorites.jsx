@@ -10,16 +10,32 @@ function latestFor(favorites, authorId) {
   return favorites.find((f) => f.author_id === authorId) || null;
 }
 
-function EmptyCard({ author, isMine }) {
+function EmptyCard({ author, isMine, onTap }) {
   const name = isMine ? 'You' : (author?.name || 'Someone');
   const accent = author?.accent_color || '#9C5E4A';
   const initial = (author?.name?.[0] || '?').toUpperCase();
   const placeholder = isMine
     ? 'nothing from you yet.'
     : `nothing from ${author?.name || 'them'} yet.`;
+  const tappable = !!onTap;
+  const onKeyDown = tappable
+    ? (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onTap();
+        }
+      }
+    : undefined;
 
   return (
-    <article className={cardStyles.card}>
+    <article
+      className={`${cardStyles.card} ${tappable ? cardStyles.tappable : ''}`}
+      onClick={tappable ? onTap : undefined}
+      role={tappable ? 'button' : undefined}
+      tabIndex={tappable ? 0 : undefined}
+      onKeyDown={onKeyDown}
+      aria-label={tappable ? 'Push your first favorite' : undefined}
+    >
       <header className={cardStyles.head}>
         <div
           className={cardStyles.avatar}
@@ -43,6 +59,7 @@ export default function Favorites({
   partners,
   currentUserProfile,
   onOpenSettings,
+  onUpdateRequest,
 }) {
   const currentUserId = currentUserProfile?.id;
   const partner = useMemo(
@@ -83,8 +100,15 @@ export default function Favorites({
         )}
 
         {myCurrent
-          ? <FavoriteCard favorite={myCurrent} author={currentUserProfile} isMine />
-          : <EmptyCard author={currentUserProfile} isMine />
+          ? (
+            <FavoriteCard
+              favorite={myCurrent}
+              author={currentUserProfile}
+              isMine
+              onTap={onUpdateRequest}
+            />
+          )
+          : <EmptyCard author={currentUserProfile} isMine onTap={onUpdateRequest} />
         }
       </div>
     </div>
