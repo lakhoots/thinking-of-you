@@ -21,7 +21,6 @@ export default function AppShell({ user, profile, onProfileChange }) {
   const [lastAddedId, setLastAddedId] = useState(null);
   const [boardArranging, setBoardArranging] = useState(false);
   const [sparkEditing, setSparkEditing] = useState(false);
-  const [favoriteEditing, setFavoriteEditing] = useState(false);
 
   const { partnership, partners, refresh: refreshPartnership } = usePartnership(profile.partnership_id);
   const { mementos, addLocal, updateLocal, removeLocal } = useMementos(profile.partnership_id);
@@ -37,10 +36,12 @@ export default function AppShell({ user, profile, onProfileChange }) {
   const {
     favorites,
     addLocal: addFavoriteLocal,
-    updateLocal: updateFavoriteLocal,
-    removeLocal: removeFavoriteLocal,
     refresh: refreshFavorites,
   } = useFavorites(profile.partnership_id);
+
+  // Favorites is sorted desc by created_at — the first row by the current
+  // user is their "current" favorite, used to flip the form copy.
+  const hasMyFavorite = favorites.some((f) => f.author_id === user.id);
 
   const partnerJoined = !!(partnership?.partner_a_id && partnership?.partner_b_id);
 
@@ -108,16 +109,11 @@ export default function AppShell({ user, profile, onProfileChange }) {
           partners={partners}
           currentUserProfile={profile}
           onOpenSettings={openSettings}
-          onFavoriteUpdated={updateFavoriteLocal}
-          onFavoriteRemoved={removeFavoriteLocal}
-          onFavoriteRestored={addFavoriteLocal}
-          onEditOpenChange={setFavoriteEditing}
         />
       )}
 
       {!boardArranging
         && !sparkEditing
-        && !favoriteEditing
         && !(showAdd && (tab === 'sparks' || tab === 'favorites')) && (
         <NavBar
           tab={tab}
@@ -149,6 +145,7 @@ export default function AppShell({ user, profile, onProfileChange }) {
         <AddFavoriteForm
           partnershipId={profile.partnership_id}
           authorId={user.id}
+          isReplacing={hasMyFavorite}
           onCreated={onFavoriteCreated}
           onClose={() => setShowAdd(false)}
         />

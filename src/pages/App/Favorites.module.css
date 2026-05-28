@@ -50,97 +50,11 @@
   object-fit: cover;
 }
 
-.feed {
+.body {
   flex: 1;
   overflow-y: auto;
-  padding: 16px 16px 24px;
+  padding: 20px 16px 28px;
   display: flex;
   flex-direction: column;
-  gap: 22px;
+  gap: 16px;
 }
-
-.group {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.dateLabel {
-  font-family: var(--sans);
-  font-size: 10px;
-  font-weight: 500;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--ink-muted);
-  padding: 0 2px;
-}
-
-.cards {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.empty {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 32px;
-  gap: 12px;
-}
-
-.emptyTitle {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 24px;
-  color: rgba(26, 18, 8, 0.5);
-}
-
-.emptySub {
-  font-family: var(--serif);
-  font-style: italic;
-  font-size: 15px;
-  color: var(--ink-dim);
-  line-height: 1.5;
-  max-width: 280px;
-}
-
-.undoBar {
-  position: fixed;
-  top: calc(var(--vv-y, 0px) + var(--vv-h, 100vh) - var(--nav-h) - env(safe-area-inset-bottom, 0px) - 16px);
-  left: calc(var(--vv-x, 0px) + var(--vv-w, 100%) / 2);
-  transform: translate(-50%, -100%);
-  background: rgba(26, 18, 8, 0.92);
-  color: #FAF6EC;
-  padding: 11px 14px 11px 18px;
-  border-radius: 999px;
-  font-size: 13px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  z-index: 220;
-  box-shadow: 0 8px 24px rgba(26, 18, 8, 0.3);
-  animation: undoIn 0.22s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-@keyframes undoIn {
-  from { transform: translate(-50%, calc(-100% + 12px)); opacity: 0; }
-  to   { transform: translate(-50%, -100%);              opacity: 1; }
-}
-
-.undoBar button {
-  background: none;
-  border: none;
-  color: #F2D6A8;
-  font-size: 13px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-.undoBar button:hover { background: rgba(255, 255, 255, 0.08); }

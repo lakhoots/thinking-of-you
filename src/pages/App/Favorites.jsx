@@ -1,23 +1,41 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import FavoriteCard from '../../components/FavoriteCard';
-import AddFavoriteForm from '../../components/AddFavoriteForm';
-import { deleteFavorite } from '../../lib/favorites';
-import { fmtDate, todayStr } from '../../lib/format';
+import cardStyles from '../../components/FavoriteCard.module.css';
 import styles from './Favorites.module.css';
 
-function groupByDate(favorites) {
-  const groups = new Map();
-  for (const f of favorites) {
-    const key = f.date || f.created_at.slice(0, 10);
-    if (!groups.has(key)) groups.set(key, []);
-    groups.get(key).push(f);
-  }
-  return Array.from(groups.entries()).sort(([a], [b]) => (a < b ? 1 : -1));
+// "Current" is just the latest row per author. Older rows are kept in
+// the DB for the future replay feature — see src/lib/favorites.js.
+function latestFor(favorites, authorId) {
+  // favorites is sorted desc by created_at upstream.
+  return favorites.find((f) => f.author_id === authorId) || null;
 }
 
-function labelForDate(d) {
-  if (d === todayStr()) return 'Today';
-  return fmtDate(d);
+function EmptyCard({ author, isMine }) {
+  const name = isMine ? 'You' : (author?.name || 'Someone');
+  const accent = author?.accent_color || '#9C5E4A';
+  const initial = (author?.name?.[0] || '?').toUpperCase();
+  const placeholder = isMine
+    ? 'nothing from you yet.'
+    : `nothing from ${author?.name || 'them'} yet.`;
+
+  return (
+    <article className={cardStyles.card}>
+      <header className={cardStyles.head}>
+        <div
+          className={cardStyles.avatar}
+          style={{ background: accent, opacity: 0.55 }}
+          aria-hidden
+        >
+          {author?.photo_url
+            ? <img src={author.photo_url} alt="" />
+            : initial}
+        </div>
+        <div className={cardStyles.name}>{name}</div>
+      </header>
+      <p className={cardStyles.prompt}>right now, my favorite thing about you is</p>
+      <p className={cardStyles.emptyBody}>{placeholder}</p>
+    </article>
+  );
 }
 
 export default function Favorites({
@@ -25,78 +43,21 @@ export default function Favorites({
   partners,
   currentUserProfile,
   onOpenSettings,
-  onFavoriteUpdated,
-  onFavoriteRemoved,
-  onFavoriteRestored,
-  onEditOpenChange,
 }) {
-  const [editingId, setEditingId] = useState(null);
-  const [pendingDelete, setPendingDelete] = useState(null);
-
   const currentUserId = currentUserProfile?.id;
-  const partnershipId = currentUserProfile?.partnership_id;
-
-  useEffect(() => {
-    onEditOpenChange?.(!!editingId);
-  }, [editingId, onEditOpenChange]);
-
-  const visibleFavorites = useMemo(
-    () => (pendingDelete ? favorites.filter((f) => f.id !== pendingDelete.favorite.id) : favorites),
-    [favorites, pendingDelete],
+  const partner = useMemo(
+    () => (partners ?? []).find((p) => p.id !== currentUserId) || null,
+    [partners, currentUserId],
   );
 
-  const grouped = useMemo(() => groupByDate(visibleFavorites), [visibleFavorites]);
-
-  const partnersById = useMemo(() => {
-    const m = new Map();
-    for (const p of partners ?? []) m.set(p.id, p);
-    if (currentUserProfile) m.set(currentUserProfile.id, currentUserProfile);
-    return m;
-  }, [partners, currentUserProfile]);
-
-  const editingFavorite = editingId ? favorites.find((f) => f.id === editingId) : null;
-
-  const requestDelete = useCallback((id) => {
-    const f = favorites.find((x) => x.id === id);
-    if (!f) return;
-    if (pendingDelete) {
-      clearTimeout(pendingDelete.timer);
-      deleteFavorite(pendingDelete.favorite.id).catch((err) =>
-        console.error('deferred favorite delete', err),
-      );
-    }
-    onFavoriteRemoved?.(id);
-    setEditingId(null);
-    const timer = setTimeout(async () => {
-      try {
-        await deleteFavorite(id);
-      } catch (err) {
-        console.error('delete favorite', err);
-        onFavoriteRestored?.(f);
-      } finally {
-        setPendingDelete((curr) => (curr?.favorite.id === id ? null : curr));
-      }
-    }, 5000);
-    setPendingDelete({ favorite: f, timer });
-  }, [favorites, pendingDelete, onFavoriteRemoved, onFavoriteRestored]);
-
-  const undoDelete = useCallback(() => {
-    if (!pendingDelete) return;
-    clearTimeout(pendingDelete.timer);
-    onFavoriteRestored?.(pendingDelete.favorite);
-    setPendingDelete(null);
-  }, [pendingDelete, onFavoriteRestored]);
-
-  useEffect(() => {
-    return () => {
-      if (pendingDelete) {
-        clearTimeout(pendingDelete.timer);
-        deleteFavorite(pendingDelete.favorite.id).catch((err) =>
-          console.error('unmount favorite delete', err),
-        );
-      }
-    };
-  }, [pendingDelete]);
+  const myCurrent = useMemo(
+    () => latestFor(favorites, currentUserId),
+    [favorites, currentUserId],
+  );
+  const partnerCurrent = useMemo(
+    () => (partner ? latestFor(favorites, partner.id) : null),
+    [favorites, partner],
+  );
 
   return (
     <div className={styles.page}>
@@ -114,54 +75,18 @@ export default function Favorites({
         </button>
       </div>
 
-      {visibleFavorites.length === 0 ? (
-        <div className={styles.empty}>
-          <div className={styles.emptyTitle}>Nothing yet.</div>
-          <div className={styles.emptySub}>
-            Right now, your favorite thing about them is…
-          </div>
-        </div>
-      ) : (
-        <div className={styles.feed}>
-          {grouped.map(([date, items]) => (
-            <section key={date} className={styles.group}>
-              <div className={styles.dateLabel}>{labelForDate(date)}</div>
-              <div className={styles.cards}>
-                {items.map((f) => (
-                  <FavoriteCard
-                    key={f.id}
-                    favorite={f}
-                    author={partnersById.get(f.author_id)}
-                    isAuthor={f.author_id === currentUserId}
-                    onEdit={(fav) => setEditingId(fav.id)}
-                  />
-                ))}
-              </div>
-            </section>
-          ))}
-        </div>
-      )}
+      <div className={styles.body}>
+        {partner && (
+          partnerCurrent
+            ? <FavoriteCard favorite={partnerCurrent} author={partner} />
+            : <EmptyCard author={partner} isMine={false} />
+        )}
 
-      {editingFavorite && (
-        <AddFavoriteForm
-          partnershipId={partnershipId}
-          authorId={currentUserId}
-          favorite={editingFavorite}
-          onUpdated={(f) => {
-            onFavoriteUpdated?.(f);
-            setEditingId(null);
-          }}
-          onDeleteRequested={(id) => requestDelete(id)}
-          onClose={() => setEditingId(null)}
-        />
-      )}
-
-      {pendingDelete && (
-        <div className={styles.undoBar} role="status">
-          <span>Favorite removed</span>
-          <button onClick={undoDelete}>Undo</button>
-        </div>
-      )}
+        {myCurrent
+          ? <FavoriteCard favorite={myCurrent} author={currentUserProfile} isMine />
+          : <EmptyCard author={currentUserProfile} isMine />
+        }
+      </div>
     </div>
   );
 }

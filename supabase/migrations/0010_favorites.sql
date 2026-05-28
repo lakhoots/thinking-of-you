@@ -1,6 +1,12 @@
 -- Favorites — small prompted love notes that complete the sentence
 -- "right now, my favorite thing about you is …".
--- Each partner writes their own when they feel called.
+--
+-- One "current" favorite per author is surfaced in the UI (the latest
+-- row by created_at), but every entry is preserved here forever — a
+-- future "replay" feature will recap the history and look for trends.
+-- For that to work, the app must INSERT only: it must never UPDATE or
+-- DELETE these rows. The policies below still permit it so the owner
+-- can clean up via SQL in a pinch, but the lib layer omits both.
 
 create table public.favorites (
   id              uuid primary key default gen_random_uuid(),

@@ -44,12 +44,13 @@
   color: var(--ink);
 }
 
-.time {
+.when {
   margin-left: auto;
   font-family: var(--sans);
   font-size: 11px;
   font-weight: 300;
   color: var(--ink-muted);
+  letter-spacing: 0.02em;
 }
 
 .prompt {
@@ -72,24 +73,11 @@
   word-break: break-word;
 }
 
-.footer {
-  display: flex;
-  justify-content: flex-end;
-  margin-top: 4px;
+.emptyBody {
+  margin: 0;
+  font-family: var(--serif);
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.5;
+  color: rgba(26, 18, 8, 0.32);
 }
-
-.editBtn {
-  background: rgba(26, 18, 8, 0.06);
-  border: none;
-  color: var(--ink);
-  font-family: var(--sans);
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.02em;
-  cursor: pointer;
-  padding: 6px 12px;
-  border-radius: 999px;
-  transition: background 0.15s;
-}
-
-.editBtn:hover { background: rgba(26, 18, 8, 0.12); }

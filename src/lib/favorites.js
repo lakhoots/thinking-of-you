@@ -1,5 +1,10 @@
 import { supabase } from './supabase';
 
+// Favorites are INSERT-only from the app. Every entry is preserved so a
+// future "replay" feature can show the history of favorites over time
+// and surface themes. Do not add update/delete here without revisiting
+// that design.
+
 export async function listFavorites(partnershipId) {
   const { data, error } = await supabase
     .from('favorites')
@@ -10,33 +15,16 @@ export async function listFavorites(partnershipId) {
   return data ?? [];
 }
 
-export async function createFavorite({ partnershipId, authorId, body, date }) {
+export async function createFavorite({ partnershipId, authorId, body }) {
   const { data, error } = await supabase
     .from('favorites')
     .insert({
       partnership_id: partnershipId,
       author_id: authorId,
       body: body.trim(),
-      date,
     })
     .select()
     .single();
   if (error) throw error;
   return data;
-}
-
-export async function updateFavorite({ favoriteId, patch }) {
-  const { data, error } = await supabase
-    .from('favorites')
-    .update(patch)
-    .eq('id', favoriteId)
-    .select()
-    .single();
-  if (error) throw error;
-  return data;
-}
-
-export async function deleteFavorite(favoriteId) {
-  const { error } = await supabase.from('favorites').delete().eq('id', favoriteId);
-  if (error) throw error;
 }

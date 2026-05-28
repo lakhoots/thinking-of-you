@@ -1,20 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
-import { createFavorite, updateFavorite } from '../lib/favorites';
-import { todayStr } from '../lib/format';
+import { createFavorite } from '../lib/favorites';
 import styles from './AddFavoriteForm.module.css';
 
+// Every submission is an INSERT — the previous "current" favorite stays
+// in the DB as part of the history that the future replay feature will
+// surface. See src/lib/favorites.js.
 export default function AddFavoriteForm({
   partnershipId,
   authorId,
-  favorite,
+  isReplacing,
   onCreated,
-  onUpdated,
-  onDeleteRequested,
   onClose,
 }) {
-  const editing = !!favorite;
-  const [body, setBody] = useState(favorite?.body || '');
-  const [date, setDate] = useState(favorite?.date || todayStr());
+  const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const bodyRef = useRef(null);
@@ -48,37 +46,21 @@ export default function AddFavoriteForm({
     setBusy(true);
     setError(null);
     try {
-      if (editing) {
-        const updated = await updateFavorite({
-          favoriteId: favorite.id,
-          patch: { body: body.trim(), date },
-        });
-        onUpdated?.(updated);
-      } else {
-        const f = await createFavorite({
-          partnershipId,
-          authorId,
-          body,
-          date,
-        });
-        onCreated?.(f);
-      }
+      const f = await createFavorite({ partnershipId, authorId, body });
+      onCreated?.(f);
     } catch (err) {
       setError(err.message);
       setBusy(false);
     }
   };
 
-  const onDelete = () => {
-    if (!editing) return;
-    onDeleteRequested?.(favorite.id);
-  };
-
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
         <div className={styles.handle} />
-        <div className={styles.title}>{editing ? 'Edit favorite' : 'New favorite'}</div>
+        <div className={styles.title}>
+          {isReplacing ? 'Update your favorite' : 'Share your favorite'}
+        </div>
 
         <p className={styles.prompt}>right now, my favorite thing about you is</p>
 
@@ -92,44 +74,15 @@ export default function AddFavoriteForm({
             onFocus={keepBodyVisible}
             onClick={keepBodyVisible}
             rows={4}
-            autoFocus={!editing}
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label}>Date</label>
-          <input
-            className={styles.input}
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+            autoFocus
           />
         </div>
 
         {error && <div className={styles.error}>{error}</div>}
 
-        {editing ? (
-          <div className={styles.editActions}>
-            <button
-              className={styles.deleteBtn}
-              onClick={onDelete}
-              disabled={busy}
-            >
-              Delete
-            </button>
-            <button
-              className={styles.submit}
-              disabled={!canSubmit}
-              onClick={submit}
-            >
-              {busy ? 'Saving…' : 'Save'}
-            </button>
-          </div>
-        ) : (
-          <button className={styles.submit} disabled={!canSubmit} onClick={submit}>
-            {busy ? 'Sending…' : 'Send →'}
-          </button>
-        )}
+        <button className={styles.submit} disabled={!canSubmit} onClick={submit}>
+          {busy ? 'Sharing…' : 'Share →'}
+        </button>
       </div>
     </div>
   );

@@ -2,6 +2,9 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { listFavorites } from '../lib/favorites';
 
+// Favorites are INSERT-only — see src/lib/favorites.js for the rationale.
+// The page derives the "current" favorite per author by picking the first
+// row per author from this sorted-desc list.
 export function useFavorites(partnershipId) {
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -43,32 +46,6 @@ export function useFavorites(partnershipId) {
           });
         },
       )
-      .on(
-        'postgres_changes',
-        {
-          event: 'UPDATE',
-          schema: 'public',
-          table: 'favorites',
-          filter: `partnership_id=eq.${partnershipId}`,
-        },
-        (payload) => {
-          setFavorites((prev) =>
-            prev.map((f) => (f.id === payload.new.id ? { ...f, ...payload.new } : f)),
-          );
-        },
-      )
-      .on(
-        'postgres_changes',
-        {
-          event: 'DELETE',
-          schema: 'public',
-          table: 'favorites',
-          filter: `partnership_id=eq.${partnershipId}`,
-        },
-        (payload) => {
-          setFavorites((prev) => prev.filter((f) => f.id !== payload.old.id));
-        },
-      )
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [partnershipId]);
@@ -76,19 +53,9 @@ export function useFavorites(partnershipId) {
   const addLocal = useCallback((f) => {
     setFavorites((prev) => {
       if (prev.some((x) => x.id === f.id)) return prev;
-      const next = [...prev, f];
-      next.sort((a, b) => (a.created_at < b.created_at ? 1 : -1));
-      return next;
+      return [f, ...prev];
     });
   }, []);
 
-  const updateLocal = useCallback((f) => {
-    setFavorites((prev) => prev.map((x) => (x.id === f.id ? { ...x, ...f } : x)));
-  }, []);
-
-  const removeLocal = useCallback((id) => {
-    setFavorites((prev) => prev.filter((f) => f.id !== id));
-  }, []);
-
-  return { favorites, loading, refresh, addLocal, updateLocal, removeLocal };
+  return { favorites, loading, refresh, addLocal };
 }
