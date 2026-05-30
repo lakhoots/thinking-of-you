@@ -100,10 +100,17 @@ export default function App() {
 
   // Track whether the on-screen keyboard is open so bottom chrome (nav bar +
   // FAB) can hide and the page can reclaim the reserved nav space. iOS can't
-  // reliably keep position:fixed bars pinned behind the keyboard, and viewport
-  // height heuristics are unreliable across iOS versions — focus of an
-  // editable element is the dependable signal that the keyboard is showing.
+  // reliably keep position:fixed bars pinned behind the keyboard. Detecting the
+  // keyboard needs two signals together: an editable element must be focused
+  // AND the visual viewport must have actually shrunk. Focus alone over-fires
+  // (browsers restore focus to inputs on load/back, hiding the nav with no
+  // keyboard); viewport shrink alone is noisy (the address bar collapsing also
+  // resizes it). The shrink is measured against the tallest height seen while
+  // nothing was focused, since window.innerHeight itself can shrink with the
+  // keyboard on some iOS versions.
   useEffect(() => {
+    const vv = window.visualViewport;
+    if (!vv) return undefined;
     const root = document.documentElement;
     const isEditable = (el) => {
       if (!el) return false;
@@ -115,16 +122,26 @@ export default function App() {
       }
       return false;
     };
+    let baseHeight = vv.height;
     const sync = () => {
-      root.setAttribute('data-kb', isEditable(document.activeElement) ? 'open' : 'closed');
+      const editable = isEditable(document.activeElement);
+      // With nothing focused the keyboard is closed, so the current height is a
+      // clean baseline to measure later shrink against.
+      if (!editable) baseHeight = Math.max(baseHeight, vv.height);
+      const shrunk = baseHeight - vv.height > 150;
+      root.setAttribute('data-kb', editable && shrunk ? 'open' : 'closed');
     };
     sync();
+    vv.addEventListener('resize', sync);
+    vv.addEventListener('scroll', sync);
     document.addEventListener('focusin', sync);
     // focusout fires before focus lands on the next field; defer so a field-to-
     // field tap doesn't briefly flag the keyboard as closed.
     const onFocusOut = () => window.setTimeout(sync, 0);
     document.addEventListener('focusout', onFocusOut);
     return () => {
+      vv.removeEventListener('resize', sync);
+      vv.removeEventListener('scroll', sync);
       document.removeEventListener('focusin', sync);
       document.removeEventListener('focusout', onFocusOut);
     };
