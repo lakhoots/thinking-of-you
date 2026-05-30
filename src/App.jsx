@@ -62,30 +62,61 @@ export default function App() {
     };
   }, []);
 
-  // Pin chrome (header / nav / rotateBar / modals) to the visual viewport.
-  // When the page is pinch-zoomed, the layout viewport stays put but the
-  // visual viewport shifts and shrinks — without this, position:fixed bars
-  // anchored to layout edges drift off-screen.
+  // Anchor the app chrome (header / nav / FAB / board canvas) to a
+  // keyboard-independent viewport so the on-screen keyboard simply overlays the
+  // UI: it slides up over whatever's there and slides away to reveal it again,
+  // with nothing reflowing, hiding, or repositioning underneath. Reacting to
+  // the keyboard's viewport shrink is exactly what caused the nav to flash and
+  // the blank gap to lag in behind the closing keyboard.
+  //
+  // We still react to two things:
+  //   - pinch-zoom (scale > 1): follow the visual viewport so fixed bars stay
+  //     pinned while a zoomed page is panned.
+  //   - Safari's toolbar showing/hiding (a small height change): track it so
+  //     the chrome keeps fitting exactly.
+  // A large height drop is the keyboard and is ignored for chrome. Modals that
+  // need to sit above the keyboard read --kb-vh instead, which always tracks
+  // the live (keyboard-aware) visual-viewport height.
   useEffect(() => {
     const vv = window.visualViewport;
-    if (!vv) return;
+    if (!vv) return undefined;
     const root = document.documentElement;
+    let baseHeight = vv.height;
+    let lastWidth = window.innerWidth;
     const update = () => {
-      root.style.setProperty('--vv-x', `${vv.offsetLeft}px`);
-      root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
-      root.style.setProperty('--vv-w', `${vv.width}px`);
-      root.style.setProperty('--vv-h', `${vv.height}px`);
+      // Live, keyboard-aware height for modals.
+      root.style.setProperty('--kb-vh', `${vv.height}px`);
 
-      // Bottom chrome (nav bar + FAB) should follow the visual viewport only
-      // while pinch-zoomed. When the on-screen keyboard shrinks the visual
-      // viewport (scale stays ~1), keep the chrome pinned to the layout
-      // viewport bottom so the keyboard covers it — otherwise the FAB rides up
-      // and collides with input controls like the comment Send button.
-      const zoomed = vv.scale > 1.01;
-      root.style.setProperty('--chrome-x', zoomed ? `${vv.offsetLeft}px` : '0px');
-      root.style.setProperty('--chrome-y', zoomed ? `${vv.offsetTop}px` : '0px');
-      root.style.setProperty('--chrome-w', zoomed ? `${vv.width}px` : `${window.innerWidth}px`);
-      root.style.setProperty('--chrome-h', zoomed ? `${vv.height}px` : `${window.innerHeight}px`);
+      if (vv.scale > 1.01) {
+        root.style.setProperty('--vv-x', `${vv.offsetLeft}px`);
+        root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
+        root.style.setProperty('--vv-w', `${vv.width}px`);
+        root.style.setProperty('--vv-h', `${vv.height}px`);
+        root.style.setProperty('--chrome-x', `${vv.offsetLeft}px`);
+        root.style.setProperty('--chrome-y', `${vv.offsetTop}px`);
+        root.style.setProperty('--chrome-w', `${vv.width}px`);
+        root.style.setProperty('--chrome-h', `${vv.height}px`);
+        return;
+      }
+
+      // Orientation change flips the width; drop the stale baseline so the new
+      // orientation's height isn't mistaken for a keyboard shrink.
+      if (window.innerWidth !== lastWidth) {
+        lastWidth = window.innerWidth;
+        baseHeight = vv.height;
+      }
+      baseHeight = Math.max(baseHeight, vv.height);
+      const keyboardOpen = baseHeight - vv.height > 150;
+      const h = `${keyboardOpen ? baseHeight : vv.height}px`;
+      const w = `${window.innerWidth}px`;
+      root.style.setProperty('--vv-x', '0px');
+      root.style.setProperty('--vv-y', '0px');
+      root.style.setProperty('--vv-w', w);
+      root.style.setProperty('--vv-h', h);
+      root.style.setProperty('--chrome-x', '0px');
+      root.style.setProperty('--chrome-y', '0px');
+      root.style.setProperty('--chrome-w', w);
+      root.style.setProperty('--chrome-h', h);
     };
     update();
     vv.addEventListener('resize', update);
@@ -95,68 +126,6 @@ export default function App() {
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
-    };
-  }, []);
-
-  // Track whether the on-screen keyboard is open so bottom chrome (nav bar +
-  // FAB) can hide and the page can reclaim the reserved nav space. iOS can't
-  // reliably keep position:fixed bars pinned behind the keyboard, so we hide
-  // them while it's up. Visibility is driven by the viewport, not by focus:
-  //   hide = viewport shrunk  OR  (editable focused AND a tap just happened)
-  // - The viewport-shrunk term keeps the chrome hidden through the *entire*
-  //   keyboard close animation — revealing it the instant focus leaves (as a
-  //   focus-only check does) paints the nav mid-screen while the viewport is
-  //   still collapsing back, which is the dismiss "flash".
-  // - The tap-focus term hides the chrome the moment a field is tapped, before
-  //   the keyboard animates up, so it never flashes on the way in either.
-  // - Requiring a recent tap stops autofocus / focus restored on load or back
-  //   navigation from hiding the chrome when no keyboard actually appears.
-  // The shrink is measured against the tallest viewport height ever seen,
-  // which stays valid even though window.innerHeight collapses with the
-  // keyboard on some iOS versions.
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return undefined;
-    const root = document.documentElement;
-    const isEditable = (el) => {
-      if (!el) return false;
-      if (el.isContentEditable) return true;
-      if (el.tagName === 'TEXTAREA') return true;
-      if (el.tagName === 'INPUT') {
-        const type = (el.type || 'text').toLowerCase();
-        return !['file', 'checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color'].includes(type);
-      }
-      return false;
-    };
-    let baseHeight = vv.height;
-    let lastTap = 0;
-    const sync = () => {
-      // The keyboard only ever shrinks the visual viewport, so the running max
-      // is a stable baseline regardless of address-bar collapse or the
-      // keyboard itself.
-      baseHeight = Math.max(baseHeight, vv.height);
-      const shrunk = baseHeight - vv.height > 150;
-      const tapFocus = Date.now() - lastTap < 1200 && isEditable(document.activeElement);
-      root.setAttribute('data-kb', shrunk || tapFocus ? 'open' : 'closed');
-    };
-    const noteTap = () => { lastTap = Date.now(); };
-    sync();
-    vv.addEventListener('resize', sync);
-    vv.addEventListener('scroll', sync);
-    document.addEventListener('pointerdown', noteTap, true);
-    document.addEventListener('touchstart', noteTap, true);
-    document.addEventListener('focusin', sync);
-    // focusout fires before focus lands on the next field; defer so a field-to-
-    // field tap doesn't momentarily reveal the chrome.
-    const onFocusOut = () => window.setTimeout(sync, 0);
-    document.addEventListener('focusout', onFocusOut);
-    return () => {
-      vv.removeEventListener('resize', sync);
-      vv.removeEventListener('scroll', sync);
-      document.removeEventListener('pointerdown', noteTap, true);
-      document.removeEventListener('touchstart', noteTap, true);
-      document.removeEventListener('focusin', sync);
-      document.removeEventListener('focusout', onFocusOut);
     };
   }, []);
 

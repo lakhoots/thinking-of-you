@@ -3,7 +3,7 @@
   top: var(--vv-y, 0px);
   left: var(--vv-x, 0px);
   width: var(--vv-w, 100%);
-  height: var(--vv-h, 100vh);
+  height: var(--kb-vh, 100vh);
   background: rgba(26, 18, 8, 0.42);
   z-index: 200;
   display: flex;
@@ -16,7 +16,7 @@
   border-radius: 22px 22px 0 0;
   padding: 16px 20px max(24px, env(safe-area-inset-bottom));
   width: 100%;
-  max-height: min(88vh, calc(var(--vv-h, 100vh) - 10px));
+  max-height: min(88vh, calc(var(--kb-vh, 100vh) - 10px));
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-padding: 20px 0 max(140px, env(safe-area-inset-bottom));

@@ -65,11 +65,3 @@
 }
 
 .addBtn:active { transform: scale(0.94); }
-
-/* While the on-screen keyboard is open, iOS can't keep these fixed bars
-   pinned behind it — they float into the middle of the screen. Hide them
-   until the keyboard dismisses. */
-:global(html[data-kb='open']) .nav,
-:global(html[data-kb='open']) .addBtn {
-  display: none;
-}
