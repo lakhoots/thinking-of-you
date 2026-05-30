@@ -88,14 +88,13 @@ export default function App() {
       root.style.setProperty('--chrome-h', zoomed ? `${vv.height}px` : `${window.innerHeight}px`);
 
       // When the on-screen keyboard shrinks the visual viewport, the bottom
-      // nav is pinned to the layout-viewport bottom (via --chrome-h) and sits
-      // behind the keyboard. The page should stop reserving space for it then,
-      // otherwise an empty gap opens between the content and the keyboard.
+      // nav and FAB can't be reliably pinned behind the keyboard on iOS
+      // (position: fixed elements float into the middle of the screen). Flag
+      // the keyboard as open so the chrome can hide itself, and stop the page
+      // reserving space for the now-hidden nav so no empty gap is left.
       const keyboardOpen = !zoomed && window.innerHeight - vv.height > 120;
-      root.style.setProperty(
-        '--nav-reserve',
-        keyboardOpen ? '0px' : 'calc(var(--nav-h) + env(safe-area-inset-bottom, 0px))',
-      );
+      root.setAttribute('data-kb', keyboardOpen ? 'open' : 'closed');
+      root.style.setProperty('--nav-reserve', keyboardOpen ? '0px' : '');
     };
     update();
     vv.addEventListener('resize', update);
