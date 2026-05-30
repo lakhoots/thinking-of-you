@@ -3,7 +3,7 @@
   top: var(--vv-y, 0px);
   left: var(--vv-x, 0px);
   width: var(--vv-w, 100%);
-  height: calc(var(--vv-h, 100vh) - var(--nav-h) - env(safe-area-inset-bottom, 0px));
+  height: calc(var(--vv-h, 100vh) - var(--nav-reserve, calc(var(--nav-h) + env(safe-area-inset-bottom, 0px))));
   display: flex;
   flex-direction: column;
   background: var(--bg);

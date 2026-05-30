@@ -86,6 +86,16 @@ export default function App() {
       root.style.setProperty('--chrome-y', zoomed ? `${vv.offsetTop}px` : '0px');
       root.style.setProperty('--chrome-w', zoomed ? `${vv.width}px` : `${window.innerWidth}px`);
       root.style.setProperty('--chrome-h', zoomed ? `${vv.height}px` : `${window.innerHeight}px`);
+
+      // When the on-screen keyboard shrinks the visual viewport, the bottom
+      // nav is pinned to the layout-viewport bottom (via --chrome-h) and sits
+      // behind the keyboard. The page should stop reserving space for it then,
+      // otherwise an empty gap opens between the content and the keyboard.
+      const keyboardOpen = !zoomed && window.innerHeight - vv.height > 120;
+      root.style.setProperty(
+        '--nav-reserve',
+        keyboardOpen ? '0px' : 'calc(var(--nav-h) + env(safe-area-inset-bottom, 0px))',
+      );
     };
     update();
     vv.addEventListener('resize', update);
