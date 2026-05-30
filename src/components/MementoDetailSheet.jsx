@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { fmtDate } from '../lib/format';
 import { updateMemento } from '../lib/mementos';
 import PhotoLightbox from './PhotoLightbox';
+import { fallbackToFull } from '../lib/thumbFallback';
 import styles from './MementoDetailSheet.module.css';
 
 export default function MementoDetailSheet({
@@ -227,7 +228,7 @@ export default function MementoDetailSheet({
           <div className={styles.editPhotos}>
             {keepPhotos.map((p) => (
               <div key={p.id} className={styles.editPhotoItem}>
-                <img src={p.thumb_url || p.image_url} alt="" />
+                <img src={p.thumb_url || p.image_url} alt="" onError={fallbackToFull(p.image_url)} />
                 <button
                   type="button"
                   className={styles.editPhotoRemove}
