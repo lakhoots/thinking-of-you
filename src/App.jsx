@@ -86,15 +86,6 @@ export default function App() {
       root.style.setProperty('--chrome-y', zoomed ? `${vv.offsetTop}px` : '0px');
       root.style.setProperty('--chrome-w', zoomed ? `${vv.width}px` : `${window.innerWidth}px`);
       root.style.setProperty('--chrome-h', zoomed ? `${vv.height}px` : `${window.innerHeight}px`);
-
-      // When the on-screen keyboard shrinks the visual viewport, the bottom
-      // nav and FAB can't be reliably pinned behind the keyboard on iOS
-      // (position: fixed elements float into the middle of the screen). Flag
-      // the keyboard as open so the chrome can hide itself, and stop the page
-      // reserving space for the now-hidden nav so no empty gap is left.
-      const keyboardOpen = !zoomed && window.innerHeight - vv.height > 120;
-      root.setAttribute('data-kb', keyboardOpen ? 'open' : 'closed');
-      root.style.setProperty('--nav-reserve', keyboardOpen ? '0px' : '');
     };
     update();
     vv.addEventListener('resize', update);
@@ -104,6 +95,38 @@ export default function App() {
       vv.removeEventListener('resize', update);
       vv.removeEventListener('scroll', update);
       window.removeEventListener('resize', update);
+    };
+  }, []);
+
+  // Track whether the on-screen keyboard is open so bottom chrome (nav bar +
+  // FAB) can hide and the page can reclaim the reserved nav space. iOS can't
+  // reliably keep position:fixed bars pinned behind the keyboard, and viewport
+  // height heuristics are unreliable across iOS versions — focus of an
+  // editable element is the dependable signal that the keyboard is showing.
+  useEffect(() => {
+    const root = document.documentElement;
+    const isEditable = (el) => {
+      if (!el) return false;
+      if (el.isContentEditable) return true;
+      if (el.tagName === 'TEXTAREA') return true;
+      if (el.tagName === 'INPUT') {
+        const type = (el.type || 'text').toLowerCase();
+        return !['file', 'checkbox', 'radio', 'button', 'submit', 'reset', 'range', 'color'].includes(type);
+      }
+      return false;
+    };
+    const sync = () => {
+      root.setAttribute('data-kb', isEditable(document.activeElement) ? 'open' : 'closed');
+    };
+    sync();
+    document.addEventListener('focusin', sync);
+    // focusout fires before focus lands on the next field; defer so a field-to-
+    // field tap doesn't briefly flag the keyboard as closed.
+    const onFocusOut = () => window.setTimeout(sync, 0);
+    document.addEventListener('focusout', onFocusOut);
+    return () => {
+      document.removeEventListener('focusin', sync);
+      document.removeEventListener('focusout', onFocusOut);
     };
   }, []);
 
