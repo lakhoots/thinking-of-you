@@ -100,13 +100,19 @@ export default function App() {
 
   // Track whether the on-screen keyboard is open so bottom chrome (nav bar +
   // FAB) can hide and the page can reclaim the reserved nav space. iOS can't
-  // reliably keep position:fixed bars pinned behind the keyboard. Detecting the
-  // keyboard needs two signals together: an editable element must be focused
-  // AND the visual viewport must have actually shrunk. Focus alone over-fires
-  // (browsers restore focus to inputs on load/back, hiding the nav with no
-  // keyboard); viewport shrink alone is noisy (the address bar collapsing also
-  // resizes it). The shrink is measured against the tallest height seen while
-  // nothing was focused, since window.innerHeight itself can shrink with the
+  // reliably keep position:fixed bars pinned behind the keyboard, so we hide
+  // them while it's up. Visibility is driven by the viewport, not by focus:
+  //   hide = viewport shrunk  OR  (editable focused AND a tap just happened)
+  // - The viewport-shrunk term keeps the chrome hidden through the *entire*
+  //   keyboard close animation — revealing it the instant focus leaves (as a
+  //   focus-only check does) paints the nav mid-screen while the viewport is
+  //   still collapsing back, which is the dismiss "flash".
+  // - The tap-focus term hides the chrome the moment a field is tapped, before
+  //   the keyboard animates up, so it never flashes on the way in either.
+  // - Requiring a recent tap stops autofocus / focus restored on load or back
+  //   navigation from hiding the chrome when no keyboard actually appears.
+  // The shrink is measured against the tallest viewport height ever seen,
+  // which stays valid even though window.innerHeight collapses with the
   // keyboard on some iOS versions.
   useEffect(() => {
     const vv = window.visualViewport;
@@ -123,25 +129,32 @@ export default function App() {
       return false;
     };
     let baseHeight = vv.height;
+    let lastTap = 0;
     const sync = () => {
-      const editable = isEditable(document.activeElement);
-      // With nothing focused the keyboard is closed, so the current height is a
-      // clean baseline to measure later shrink against.
-      if (!editable) baseHeight = Math.max(baseHeight, vv.height);
+      // The keyboard only ever shrinks the visual viewport, so the running max
+      // is a stable baseline regardless of address-bar collapse or the
+      // keyboard itself.
+      baseHeight = Math.max(baseHeight, vv.height);
       const shrunk = baseHeight - vv.height > 150;
-      root.setAttribute('data-kb', editable && shrunk ? 'open' : 'closed');
+      const tapFocus = Date.now() - lastTap < 1200 && isEditable(document.activeElement);
+      root.setAttribute('data-kb', shrunk || tapFocus ? 'open' : 'closed');
     };
+    const noteTap = () => { lastTap = Date.now(); };
     sync();
     vv.addEventListener('resize', sync);
     vv.addEventListener('scroll', sync);
+    document.addEventListener('pointerdown', noteTap, true);
+    document.addEventListener('touchstart', noteTap, true);
     document.addEventListener('focusin', sync);
     // focusout fires before focus lands on the next field; defer so a field-to-
-    // field tap doesn't briefly flag the keyboard as closed.
+    // field tap doesn't momentarily reveal the chrome.
     const onFocusOut = () => window.setTimeout(sync, 0);
     document.addEventListener('focusout', onFocusOut);
     return () => {
       vv.removeEventListener('resize', sync);
       vv.removeEventListener('scroll', sync);
+      document.removeEventListener('pointerdown', noteTap, true);
+      document.removeEventListener('touchstart', noteTap, true);
       document.removeEventListener('focusin', sync);
       document.removeEventListener('focusout', onFocusOut);
     };
