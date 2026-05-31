@@ -84,37 +84,37 @@ export default function App() {
     let baseHeight = vv.height;
     let lastWidth = window.innerWidth;
     const update = () => {
-      // Live, keyboard-aware height for modals.
+      // Live, keyboard-aware height for modals that sit above the keyboard.
       root.style.setProperty('--kb-vh', `${vv.height}px`);
 
-      if (vv.scale > 1.01) {
-        root.style.setProperty('--vv-x', `${vv.offsetLeft}px`);
-        root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
-        root.style.setProperty('--vv-w', `${vv.width}px`);
-        root.style.setProperty('--vv-h', `${vv.height}px`);
-        root.style.setProperty('--chrome-x', `${vv.offsetLeft}px`);
-        root.style.setProperty('--chrome-y', `${vv.offsetTop}px`);
-        root.style.setProperty('--chrome-w', `${vv.width}px`);
-        root.style.setProperty('--chrome-h', `${vv.height}px`);
-        return;
-      }
-
+      const zoomed = vv.scale > 1.01;
       // Orientation change flips the width; drop the stale baseline so the new
       // orientation's height isn't mistaken for a keyboard shrink.
       if (window.innerWidth !== lastWidth) {
         lastWidth = window.innerWidth;
         baseHeight = vv.height;
       }
-      baseHeight = Math.max(baseHeight, vv.height);
-      const keyboardOpen = baseHeight - vv.height > 150;
+      if (!zoomed) baseHeight = Math.max(baseHeight, vv.height);
+
+      // Always track the visual viewport's offset: when the keyboard opens iOS
+      // Safari scrolls the whole layout viewport up to reveal the focused
+      // field, dragging position:fixed chrome with it. Offsetting the chrome by
+      // that scroll cancels the shift so it stays visually pinned.
+      const x = `${vv.offsetLeft}px`;
+      const y = `${vv.offsetTop}px`;
+      // Width tracks the visual viewport only while zoomed (the keyboard never
+      // changes width). Height follows the viewport for pinch-zoom and Safari's
+      // toolbar, but a large shrink is the keyboard and is frozen out, so the UI
+      // keeps its full height and the keyboard simply overlays it.
+      const keyboardOpen = !zoomed && baseHeight - vv.height > 150;
+      const w = zoomed ? `${vv.width}px` : `${window.innerWidth}px`;
       const h = `${keyboardOpen ? baseHeight : vv.height}px`;
-      const w = `${window.innerWidth}px`;
-      root.style.setProperty('--vv-x', '0px');
-      root.style.setProperty('--vv-y', '0px');
+      root.style.setProperty('--vv-x', x);
+      root.style.setProperty('--vv-y', y);
       root.style.setProperty('--vv-w', w);
       root.style.setProperty('--vv-h', h);
-      root.style.setProperty('--chrome-x', '0px');
-      root.style.setProperty('--chrome-y', '0px');
+      root.style.setProperty('--chrome-x', x);
+      root.style.setProperty('--chrome-y', y);
       root.style.setProperty('--chrome-w', w);
       root.style.setProperty('--chrome-h', h);
     };
