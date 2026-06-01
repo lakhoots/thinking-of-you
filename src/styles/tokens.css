@@ -43,16 +43,13 @@
   --header-h: 44px;
   --nav-h: 80px;
 
-  /* Viewport anchors for fixed chrome (header / nav / FAB / pages / board).
-     They are deliberately STATIC and keyboard-independent: dvh tracks Safari's
-     toolbar but ignores the on-screen keyboard, so the chrome never moves and
-     the keyboard simply slides up over it and back down. (JS only overrides
-     these while pinch-zoomed, which is otherwise blocked.) --kb-vh is the one
-     keyboard-aware height, set from JS, used by modals that sit above the
-     keyboard. */
+  /* Viewport anchors for fixed overlays (grain, lightbox, undo bars) and the
+     app shell. Deliberately STATIC and keyboard-independent: dvh tracks
+     Safari's toolbar but ignores the on-screen keyboard, so nothing moves and
+     the keyboard simply slides up over the UI and back down. (JS only overrides
+     these while pinch-zoomed, which is otherwise blocked.) */
   --vv-x: 0px;
   --vv-y: 0px;
   --vv-w: 100vw;
   --vv-h: 100dvh;
-  --kb-vh: 100dvh;
 }

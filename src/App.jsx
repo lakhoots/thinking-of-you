@@ -62,22 +62,17 @@ export default function App() {
     };
   }, []);
 
-  // The app chrome (header / nav / FAB / pages / board) is sized in static,
-  // keyboard-independent CSS (dvh) so the on-screen keyboard simply overlays a
-  // motionless UI — no JS re-measures the viewport on keyboard events, which is
-  // what made the chrome stutter as it tried to chase iOS's keyboard animation.
-  //
-  // The only thing we track in JS is --kb-vh: the live (keyboard-aware) height
-  // that modal sheets use to sit above the keyboard. While pinch-zoomed we also
-  // pin the few remaining fixed overlays (grain, lightbox, undo bars) to the
-  // visual viewport so they don't drift off a zoomed page.
+  // The whole UI — app chrome and modal sheets — is sized in static,
+  // keyboard-independent CSS (dvh), so the on-screen keyboard simply overlays a
+  // motionless UI instead of reshaping it. No JS re-measures the viewport on
+  // keyboard events (that stutter is what made everything jump). The only JS
+  // here pins the few fixed overlays (grain, lightbox, undo bars) to the visual
+  // viewport while pinch-zoomed so they don't drift off a zoomed page.
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return undefined;
     const root = document.documentElement;
     const update = () => {
-      root.style.setProperty('--kb-vh', `${vv.height}px`);
-
       if (vv.scale > 1.01) {
         root.style.setProperty('--vv-x', `${vv.offsetLeft}px`);
         root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
