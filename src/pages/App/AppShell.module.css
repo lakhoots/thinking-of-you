@@ -4,10 +4,7 @@
    this static column (covering the nav) and reveals it again on dismiss, with
    nothing repositioning. This is what avoids the iOS fixed-bottom-bar jank. */
 .shell {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
+  position: relative;
   height: 100dvh;
   display: flex;
   flex-direction: column;
