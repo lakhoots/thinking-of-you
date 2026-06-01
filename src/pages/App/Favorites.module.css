@@ -1,15 +1,13 @@
 .page {
-  position: fixed;
-  top: var(--vv-y, 0px);
-  left: var(--vv-x, 0px);
-  width: var(--vv-w, 100%);
-  height: calc(var(--vv-h, 100vh) - var(--nav-h) - env(safe-area-inset-bottom, 0px));
+  flex: 1;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   background: var(--bg);
 }
 
 .header {
+  flex-shrink: 0;
   height: var(--header-h);
   background: var(--bg);
   border-bottom: 1px solid var(--border);
@@ -52,6 +50,7 @@
 
 .body {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 20px 16px 28px;
   display: flex;

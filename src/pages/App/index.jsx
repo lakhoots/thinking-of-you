@@ -94,54 +94,56 @@ export default function AppShell({ user, profile, onProfileChange }) {
 
   return (
     <>
-      {tab === 'board' && (
-        <Board
-          mementos={mementos}
-          partners={partners}
-          partnershipLabel={partnership?.label ?? ''}
-          lastAddedId={lastAddedId}
-          currentUserProfile={profile}
-          onOpenSettings={openSettings}
-          onMementoSaved={updateLocal}
-          onMementoRemoved={removeLocal}
-          onMementoRestored={addLocal}
-          onArrangeModeChange={setBoardArranging}
-          onVisibleRectChange={setBoardVisibleRect}
-        />
-      )}
-      {tab === 'sparks' && (
-        <Sparks
-          sparks={sparks}
-          partners={partners}
-          currentUserProfile={profile}
-          onOpenSettings={openSettings}
-          onSparkUpdated={updateSparkLocal}
-          onSparkCommentAdded={addSparkCommentLocal}
-          onSparkSeen={markSparkSeenLocal}
-          onSparkRemoved={removeSparkLocal}
-          onSparkRestored={addSparkLocal}
-          onEditOpenChange={setSparkEditing}
-        />
-      )}
-      {tab === 'favorites' && (
-        <Favorites
-          favorites={favorites}
-          partners={partners}
-          currentUserProfile={profile}
-          onOpenSettings={openSettings}
-          onUpdateRequest={() => setShowAdd(true)}
-        />
-      )}
+      <div className={shellStyles.shell}>
+        {tab === 'board' && (
+          <Board
+            mementos={mementos}
+            partners={partners}
+            partnershipLabel={partnership?.label ?? ''}
+            lastAddedId={lastAddedId}
+            currentUserProfile={profile}
+            onOpenSettings={openSettings}
+            onMementoSaved={updateLocal}
+            onMementoRemoved={removeLocal}
+            onMementoRestored={addLocal}
+            onArrangeModeChange={setBoardArranging}
+            onVisibleRectChange={setBoardVisibleRect}
+          />
+        )}
+        {tab === 'sparks' && (
+          <Sparks
+            sparks={sparks}
+            partners={partners}
+            currentUserProfile={profile}
+            onOpenSettings={openSettings}
+            onSparkUpdated={updateSparkLocal}
+            onSparkCommentAdded={addSparkCommentLocal}
+            onSparkSeen={markSparkSeenLocal}
+            onSparkRemoved={removeSparkLocal}
+            onSparkRestored={addSparkLocal}
+            onEditOpenChange={setSparkEditing}
+          />
+        )}
+        {tab === 'favorites' && (
+          <Favorites
+            favorites={favorites}
+            partners={partners}
+            currentUserProfile={profile}
+            onOpenSettings={openSettings}
+            onUpdateRequest={() => setShowAdd(true)}
+          />
+        )}
 
-      {!boardArranging
-        && !sparkEditing
-        && !(showAdd && (tab === 'sparks' || tab === 'favorites')) && (
-        <NavBar
-          tab={tab}
-          onTab={setTab}
-          onAdd={tab === 'board' ? openBoardAdd : () => setShowAdd(true)}
-        />
-      )}
+        {!boardArranging
+          && !sparkEditing
+          && !(showAdd && (tab === 'sparks' || tab === 'favorites')) && (
+          <NavBar
+            tab={tab}
+            onTab={setTab}
+            onAdd={tab === 'board' ? openBoardAdd : () => setShowAdd(true)}
+          />
+        )}
+      </div>
 
       {showAdd && tab === 'board' && (
         <AddMementoForm

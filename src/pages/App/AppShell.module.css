@@ -1,3 +1,16 @@
+/* The app frame: one fixed, full-screen, non-scrolling flex column. The
+   header, the scrollable page, and the nav are all normal flex children — none
+   are position:fixed — so the on-screen keyboard simply overlays the bottom of
+   this static column (covering the nav) and reveals it again on dismiss, with
+   nothing repositioning. This is what avoids the iOS fixed-bottom-bar jank. */
+.shell {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
 .waitPage {
   position: fixed;
   inset: 0;

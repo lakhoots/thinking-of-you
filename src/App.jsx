@@ -69,7 +69,8 @@ export default function App() {
   //
   // The only thing we track in JS is --kb-vh: the live (keyboard-aware) height
   // that modal sheets use to sit above the keyboard. While pinch-zoomed we also
-  // pin the chrome to the visual viewport so it doesn't drift off a zoomed page.
+  // pin the few remaining fixed overlays (grain, lightbox, undo bars) to the
+  // visual viewport so they don't drift off a zoomed page.
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return undefined;
@@ -82,13 +83,9 @@ export default function App() {
         root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
         root.style.setProperty('--vv-w', `${vv.width}px`);
         root.style.setProperty('--vv-h', `${vv.height}px`);
-        root.style.setProperty('--chrome-x', `${vv.offsetLeft}px`);
-        root.style.setProperty('--chrome-y', `${vv.offsetTop}px`);
-        root.style.setProperty('--chrome-w', `${vv.width}px`);
-        root.style.setProperty('--chrome-h', `${vv.height}px`);
       } else {
-        // Hand the chrome back to the static dvh-based defaults in tokens.css.
-        for (const v of ['--vv-x', '--vv-y', '--vv-w', '--vv-h', '--chrome-x', '--chrome-y', '--chrome-w', '--chrome-h']) {
+        // Hand the overlays back to the static dvh-based defaults in tokens.css.
+        for (const v of ['--vv-x', '--vv-y', '--vv-w', '--vv-h']) {
           root.style.removeProperty(v);
         }
       }
