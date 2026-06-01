@@ -42,4 +42,21 @@
      safe-area-inset-bottom; pages subtract it from their viewport. */
   --header-h: 44px;
   --nav-h: 80px;
+
+  /* Viewport anchors for fixed chrome (header / nav / FAB / pages / board).
+     They are deliberately STATIC and keyboard-independent: dvh tracks Safari's
+     toolbar but ignores the on-screen keyboard, so the chrome never moves and
+     the keyboard simply slides up over it and back down. (JS only overrides
+     these while pinch-zoomed, which is otherwise blocked.) --kb-vh is the one
+     keyboard-aware height, set from JS, used by modals that sit above the
+     keyboard. */
+  --vv-x: 0px;
+  --vv-y: 0px;
+  --vv-w: 100vw;
+  --vv-h: 100dvh;
+  --chrome-x: 0px;
+  --chrome-y: 0px;
+  --chrome-w: 100vw;
+  --chrome-h: 100dvh;
+  --kb-vh: 100dvh;
 }

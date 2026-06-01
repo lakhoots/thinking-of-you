@@ -62,61 +62,36 @@ export default function App() {
     };
   }, []);
 
-  // Anchor the app chrome (header / nav / FAB / board canvas) to a
-  // keyboard-independent viewport so the on-screen keyboard simply overlays the
-  // UI: it slides up over whatever's there and slides away to reveal it again,
-  // with nothing reflowing, hiding, or repositioning underneath. Reacting to
-  // the keyboard's viewport shrink is exactly what caused the nav to flash and
-  // the blank gap to lag in behind the closing keyboard.
+  // The app chrome (header / nav / FAB / pages / board) is sized in static,
+  // keyboard-independent CSS (dvh) so the on-screen keyboard simply overlays a
+  // motionless UI — no JS re-measures the viewport on keyboard events, which is
+  // what made the chrome stutter as it tried to chase iOS's keyboard animation.
   //
-  // We still react to two things:
-  //   - pinch-zoom (scale > 1): follow the visual viewport so fixed bars stay
-  //     pinned while a zoomed page is panned.
-  //   - Safari's toolbar showing/hiding (a small height change): track it so
-  //     the chrome keeps fitting exactly.
-  // A large height drop is the keyboard and is ignored for chrome. Modals that
-  // need to sit above the keyboard read --kb-vh instead, which always tracks
-  // the live (keyboard-aware) visual-viewport height.
+  // The only thing we track in JS is --kb-vh: the live (keyboard-aware) height
+  // that modal sheets use to sit above the keyboard. While pinch-zoomed we also
+  // pin the chrome to the visual viewport so it doesn't drift off a zoomed page.
   useEffect(() => {
     const vv = window.visualViewport;
     if (!vv) return undefined;
     const root = document.documentElement;
-    let baseHeight = vv.height;
-    let lastWidth = window.innerWidth;
     const update = () => {
-      // Live, keyboard-aware height for modals that sit above the keyboard.
       root.style.setProperty('--kb-vh', `${vv.height}px`);
 
-      const zoomed = vv.scale > 1.01;
-      // Orientation change flips the width; drop the stale baseline so the new
-      // orientation's height isn't mistaken for a keyboard shrink.
-      if (window.innerWidth !== lastWidth) {
-        lastWidth = window.innerWidth;
-        baseHeight = vv.height;
+      if (vv.scale > 1.01) {
+        root.style.setProperty('--vv-x', `${vv.offsetLeft}px`);
+        root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
+        root.style.setProperty('--vv-w', `${vv.width}px`);
+        root.style.setProperty('--vv-h', `${vv.height}px`);
+        root.style.setProperty('--chrome-x', `${vv.offsetLeft}px`);
+        root.style.setProperty('--chrome-y', `${vv.offsetTop}px`);
+        root.style.setProperty('--chrome-w', `${vv.width}px`);
+        root.style.setProperty('--chrome-h', `${vv.height}px`);
+      } else {
+        // Hand the chrome back to the static dvh-based defaults in tokens.css.
+        for (const v of ['--vv-x', '--vv-y', '--vv-w', '--vv-h', '--chrome-x', '--chrome-y', '--chrome-w', '--chrome-h']) {
+          root.style.removeProperty(v);
+        }
       }
-      if (!zoomed) baseHeight = Math.max(baseHeight, vv.height);
-
-      // Always track the visual viewport's offset: when the keyboard opens iOS
-      // Safari scrolls the whole layout viewport up to reveal the focused
-      // field, dragging position:fixed chrome with it. Offsetting the chrome by
-      // that scroll cancels the shift so it stays visually pinned.
-      const x = `${vv.offsetLeft}px`;
-      const y = `${vv.offsetTop}px`;
-      // Width tracks the visual viewport only while zoomed (the keyboard never
-      // changes width). Height follows the viewport for pinch-zoom and Safari's
-      // toolbar, but a large shrink is the keyboard and is frozen out, so the UI
-      // keeps its full height and the keyboard simply overlays it.
-      const keyboardOpen = !zoomed && baseHeight - vv.height > 150;
-      const w = zoomed ? `${vv.width}px` : `${window.innerWidth}px`;
-      const h = `${keyboardOpen ? baseHeight : vv.height}px`;
-      root.style.setProperty('--vv-x', x);
-      root.style.setProperty('--vv-y', y);
-      root.style.setProperty('--vv-w', w);
-      root.style.setProperty('--vv-h', h);
-      root.style.setProperty('--chrome-x', x);
-      root.style.setProperty('--chrome-y', y);
-      root.style.setProperty('--chrome-w', w);
-      root.style.setProperty('--chrome-h', h);
     };
     update();
     vv.addEventListener('resize', update);
