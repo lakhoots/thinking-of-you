@@ -3,7 +3,8 @@
   top: var(--vv-y, 0px);
   left: var(--vv-x, 0px);
   width: var(--vv-w, 100%);
-  height: var(--kb-vh, 100vh);
+  height: 100dvh;
+  padding-bottom: calc(100dvh - var(--kb-vh, 100dvh));
   background: rgba(26, 18, 8, 0.42);
   z-index: 200;
   display: flex;

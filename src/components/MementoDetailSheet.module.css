@@ -3,7 +3,8 @@
   top: var(--vv-y, 0px);
   left: var(--vv-x, 0px);
   width: var(--vv-w, 100%);
-  height: var(--kb-vh, 100vh);
+  height: 100dvh;
+  padding-bottom: calc(100dvh - var(--kb-vh, 100dvh));
   background: rgba(26, 18, 8, 0.55);
   z-index: 300;
   display: flex;
@@ -22,7 +23,7 @@
   background: var(--card-back);
   width: 100%;
   max-width: 520px;
-  max-height: 94vh;
+  max-height: min(94vh, calc(var(--kb-vh, 100vh) - 10px));
   border-radius: 18px 18px 0 0;
   padding: 22px 22px 28px;
   overflow-y: auto;
