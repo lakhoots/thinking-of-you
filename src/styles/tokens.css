@@ -52,4 +52,7 @@
   --vv-y: 0px;
   --vv-w: 100vw;
   --vv-h: 100dvh;
+  /* Live height of the area above the keyboard (set from JS). Compact modal
+     sheets use it to lift themselves fully above the keyboard. */
+  --kb-vh: 100dvh;
 }
