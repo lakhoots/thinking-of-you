@@ -3,7 +3,7 @@
   top: var(--vv-y, 0px);
   left: var(--vv-x, 0px);
   width: var(--vv-w, 100%);
-  height: var(--vv-h, 100vh);
+  height: 100dvh;
   background: rgba(26, 18, 8, 0.42);
   z-index: 200;
   display: flex;
@@ -16,7 +16,7 @@
   border-radius: 22px 22px 0 0;
   padding: 16px 20px max(24px, env(safe-area-inset-bottom));
   width: 100%;
-  max-height: min(88vh, calc(var(--vv-h, 100vh) - 10px));
+  max-height: 88vh;
   overflow-y: auto;
   overscroll-behavior: contain;
   scroll-padding: 20px 0 max(140px, env(safe-area-inset-bottom));
@@ -100,6 +100,15 @@ textarea.input {
   resize: vertical;
   line-height: 1.55;
   scroll-margin: 84px 0 160px;
+}
+
+/* iOS sizes native date controls to their own content and ignores
+   width: 100%, overflowing past the screen. Reset the appearance so the
+   input respects the container width like the note field above it. */
+input[type="date"].input {
+  -webkit-appearance: none;
+  appearance: none;
+  min-width: 0;
 }
 
 .upload {

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useState } from 'react';
 import { createFavorite } from '../lib/favorites';
 import styles from './AddFavoriteForm.module.css';
 
@@ -14,29 +14,6 @@ export default function AddFavoriteForm({
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const bodyRef = useRef(null);
-
-  const keepBodyVisible = () => {
-    [0, 140, 320].forEach((delay) => {
-      window.setTimeout(() => {
-        bodyRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
-      }, delay);
-    });
-  };
-
-  useEffect(() => {
-    const vv = window.visualViewport;
-    if (!vv) return undefined;
-    const onViewportChange = () => {
-      if (document.activeElement === bodyRef.current) keepBodyVisible();
-    };
-    vv.addEventListener('resize', onViewportChange);
-    vv.addEventListener('scroll', onViewportChange);
-    return () => {
-      vv.removeEventListener('resize', onViewportChange);
-      vv.removeEventListener('scroll', onViewportChange);
-    };
-  }, []);
 
   const canSubmit = body.trim().length > 0 && !busy;
 
@@ -63,13 +40,10 @@ export default function AddFavoriteForm({
 
         <div className={styles.field}>
           <textarea
-            ref={bodyRef}
             className={styles.input}
             placeholder="…"
             value={body}
             onChange={(e) => setBody(e.target.value)}
-            onFocus={keepBodyVisible}
-            onClick={keepBodyVisible}
             rows={4}
             autoFocus
           />

@@ -33,7 +33,13 @@ function keepCommentFormVisible(input) {
     const formRect = form.getBoundingClientRect();
     const feedRect = feed.getBoundingClientRect();
     const bottomSpace = 18;
-    const overflowBottom = formRect.bottom - (feedRect.bottom - bottomSpace);
+    // The feed runs full-height under the on-screen keyboard, so the real
+    // visible bottom is whichever is higher: the feed's edge or the keyboard
+    // top (the visual viewport's bottom).
+    const vv = window.visualViewport;
+    const keyboardTop = vv ? vv.offsetTop + vv.height : feedRect.bottom;
+    const visibleBottom = Math.min(feedRect.bottom, keyboardTop);
+    const overflowBottom = formRect.bottom - (visibleBottom - bottomSpace);
     const overflowTop = formRect.top - (feedRect.top + 18);
 
     if (overflowBottom > 0) {

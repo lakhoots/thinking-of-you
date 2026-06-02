@@ -3,7 +3,10 @@
   top: var(--vv-y, 0px);
   left: var(--vv-x, 0px);
   width: var(--vv-w, 100%);
-  height: var(--vv-h, 100vh);
+  /* Full-height scrim (so the page never shows through behind the keyboard),
+     with the sheet lifted above the keyboard by reserving its height. */
+  height: 100dvh;
+  padding-bottom: calc(100dvh - var(--kb-vh, 100dvh));
   background: rgba(26, 18, 8, 0.42);
   z-index: 200;
   display: flex;
@@ -16,10 +19,11 @@
   border-radius: 22px 22px 0 0;
   padding: 16px 20px max(24px, env(safe-area-inset-bottom));
   width: 100%;
-  max-height: min(88vh, calc(var(--vv-h, 100vh) - 10px));
+  /* Compact, content-sized sheet that fits in the area above the keyboard so
+     the textarea and the Push button are both on screen. */
+  max-height: calc(var(--kb-vh, 100vh) - 10px);
   overflow-y: auto;
   overscroll-behavior: contain;
-  scroll-padding: 20px 0 max(140px, env(safe-area-inset-bottom));
   -webkit-overflow-scrolling: touch;
   animation: sheetUp 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
@@ -84,9 +88,8 @@
 
 textarea.input {
   min-height: 96px;
-  resize: vertical;
+  resize: none;
   line-height: 1.55;
-  scroll-margin: 84px 0 160px;
 }
 
 .error {
