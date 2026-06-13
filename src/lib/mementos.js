@@ -318,6 +318,21 @@ export async function deleteListItem(itemId) {
   if (error) throw error;
 }
 
+// Persist a new ordering by writing each item's position to its index.
+// Skips optimistic (not-yet-saved) temp rows. Lists are short, so a handful
+// of updates is fine.
+export async function reorderListItems(orderedItems) {
+  for (let i = 0; i < orderedItems.length; i++) {
+    const it = orderedItems[i];
+    if (String(it.id).startsWith('temp-')) continue;
+    const { error } = await supabase
+      .from('memento_list_items')
+      .update({ position: i })
+      .eq('id', it.id);
+    if (error) throw error;
+  }
+}
+
 // Batch-move pins. Either partner may call this — backed by the
 // move_mementos SECURITY DEFINER RPC, which only touches pos_x/pos_y/rotation.
 export async function moveMementos(moves) {

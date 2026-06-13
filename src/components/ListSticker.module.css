@@ -1,83 +1,150 @@
-/* Themed-list board sticker. Fills the 138×170 card; the shape itself is the
-   pin (no cream frame around it). Colour comes from --accent set inline. */
+/* Themed-list board stickers. Each fills the 138×170 card; the shape itself is
+   the pin (no cream frame around it). Accent comes from --accent set inline. */
 
-.sticker {
+/* ─── Movie ticket stub ─────────────────────────────────────────────── */
+.ticket {
   width: 100%;
   height: 100%;
+  background: #F6EFDF; /* warm ticket paper */
+  border-radius: 6px;
+  display: flex;
+  flex-direction: column;
+  font-family: var(--sans);
+  color: #2A2018;
+  position: relative;
+  overflow: hidden;
+  box-shadow:
+    0 14px 24px rgba(32, 19, 6, 0.26),
+    0 4px 8px rgba(32, 19, 6, 0.18);
+}
+
+/* subtle paper grain */
+.ticket::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background-image: radial-gradient(rgba(42, 32, 24, 0.05) 0.5px, transparent 0.6px);
+  background-size: 4px 4px;
+  pointer-events: none;
+}
+
+.tHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--accent);
+  color: #FCEFE0;
+  padding: 5px 9px;
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: 0.2em;
+}
+
+.tNo {
+  letter-spacing: 0.08em;
+  opacity: 0.85;
+  font-variant-numeric: tabular-nums;
+}
+
+.tBody {
+  flex: 1;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  padding: 16px 12px;
   text-align: center;
-  color: #FBF4E6;
-  background:
-    linear-gradient(155deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.12)),
-    var(--accent, #9C5E4A);
+  gap: 5px;
+  padding: 8px 10px;
+}
+
+.tKicker {
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: 0.3em;
+  color: var(--accent);
+}
+
+.tTitle {
+  font-family: var(--serif);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1.15;
+  color: #241B12;
+  max-height: 3.4em;
+  overflow: hidden;
+}
+
+.tStars {
+  font-size: 9px;
+  letter-spacing: 2px;
+  color: var(--accent);
+}
+
+/* perforation line with notches bitten out of each edge */
+.tPerf {
+  position: relative;
+  height: 0;
+  border-top: 2px dashed rgba(42, 32, 24, 0.32);
+  margin: 0 7px;
+}
+
+.tPerf::before,
+.tPerf::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 13px;
+  height: 13px;
+  border-radius: 50%;
+  background: var(--bg, #F4ECD8);
+  transform: translate(-50%, -50%);
+}
+
+.tPerf::before { left: -7px; }   /* bite into the left edge */
+.tPerf::after  { left: calc(100% + 7px); } /* bite into the right edge */
+
+.tStub {
+  padding: 7px 10px 9px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* faux thermal-printed barcode */
+.tBarcode {
+  height: 20px;
+  background-image: repeating-linear-gradient(
+    90deg,
+    #241B12 0, #241B12 1px, transparent 1px, transparent 3px,
+    #241B12 3px, #241B12 5px, transparent 5px, transparent 6px,
+    #241B12 6px, #241B12 7px, transparent 7px, transparent 10px
+  );
+}
+
+.tMeta {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  color: rgba(42, 32, 24, 0.6);
+}
+
+/* ─── Custom checklist card ─────────────────────────────────────────── */
+.card {
+  width: 100%;
+  height: 100%;
+  background: #FBF6EA;
+  border-radius: 6px;
+  border: 1px solid rgba(42, 32, 24, 0.12);
   box-shadow:
-    0 14px 24px rgba(32, 19, 6, 0.26),
-    0 4px 8px rgba(32, 19, 6, 0.18);
+    0 12px 22px rgba(32, 19, 6, 0.22),
+    0 3px 6px rgba(32, 19, 6, 0.16);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 15px 12px 11px;
   position: relative;
   overflow: hidden;
-}
-
-.emoji {
-  font-size: 40px;
-  line-height: 1;
-  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
-}
-
-.name {
-  font-family: var(--serif);
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1.2;
-  max-height: 2.4em;
-  overflow: hidden;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
-}
-
-.meta {
-  font-family: var(--sans);
-  font-size: 9px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  opacity: 0.85;
-}
-
-/* ── Ticket (movies): rounded stub with a perforated tear line and side
-      notches punched out of the accent fill. ── */
-.ticket {
-  border-radius: 10px;
-}
-
-.ticket::before {
-  /* perforation line below the header */
-  content: '';
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  top: 70px;
-  border-top: 2px dashed rgba(251, 244, 230, 0.5);
-}
-
-.ticket::after {
-  /* side notches via two radial gradients pinned to the tear line */
-  content: '';
-  position: absolute;
-  inset: 0;
-  background:
-    radial-gradient(circle at left 70px, var(--bg, #F4ECD8) 7px, transparent 7.5px),
-    radial-gradient(circle at right 70px, var(--bg, #F4ECD8) 7px, transparent 7.5px);
-  pointer-events: none;
-}
-
-/* ── Recipe card (dishes): paper card with a ruled header band. ── */
-.card {
-  border-radius: 6px;
-  justify-content: flex-start;
-  padding-top: 30px;
 }
 
 .card::before {
@@ -86,47 +153,86 @@
   top: 0;
   left: 0;
   right: 0;
-  height: 20px;
-  background: rgba(0, 0, 0, 0.16);
+  height: 5px;
+  background: var(--accent);
+  opacity: 0.9;
 }
 
-.card::after {
-  /* faint ruled lines under the title, like a recipe card */
-  content: '';
-  position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 16px;
-  height: 34px;
-  background-image: repeating-linear-gradient(
-    rgba(251, 244, 230, 0) 0px,
-    rgba(251, 244, 230, 0) 10px,
-    rgba(251, 244, 230, 0.32) 11px
-  );
-  pointer-events: none;
+.cardTitle {
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.2;
+  color: #241B12;
+  max-height: 2.5em;
+  overflow: hidden;
 }
 
-/* ── Label (books / places / generic): luggage tag with a punched hole and a
-      clipped top-left corner. ── */
-.label {
-  border-radius: 8px;
-  clip-path: polygon(18px 0, 100% 0, 100% 100%, 0 100%, 0 18px);
+.cardList {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow: hidden;
 }
 
-.label::before {
-  /* punched hole near the clipped corner */
-  content: '';
-  position: absolute;
-  top: 8px;
-  left: 10px;
-  width: 9px;
-  height: 9px;
-  border-radius: 50%;
-  background: var(--bg, #F4ECD8);
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+.cardItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  line-height: 1.2;
+  color: #3A2E22;
 }
 
-/* ── Custom uploaded image — frameless, like a transparent-PNG photo. ── */
+.cardBox {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  border: 1.5px solid var(--accent);
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 8px;
+  font-weight: 700;
+  color: #FBF6EA;
+}
+
+.cardItemDone .cardBox { background: var(--accent); }
+
+.cardItemDone .cardItemText {
+  text-decoration: line-through;
+  color: rgba(58, 46, 34, 0.42);
+}
+
+.cardItemText {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cardMore {
+  font-size: 8px;
+  letter-spacing: 0.05em;
+  color: rgba(58, 46, 34, 0.5);
+}
+
+.cardEmpty {
+  font-family: var(--italic);
+  font-style: italic;
+  font-size: 12px;
+  color: rgba(58, 46, 34, 0.42);
+}
+
+.cardMeta {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(58, 46, 34, 0.55);
+}
+
+/* ─── Custom uploaded image — frameless, like a transparent-PNG photo ── */
 .customWrap {
   width: 100%;
   height: 100%;

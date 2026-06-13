@@ -234,7 +234,12 @@ textarea.input {
   background: var(--bg-raised);
 }
 
-.themeEmoji { font-size: 20px; line-height: 1; }
+.themeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-dim);
+}
 
 .themeLbl {
   font-size: 12px;

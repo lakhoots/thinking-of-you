@@ -2,6 +2,7 @@ import { useRef, useState } from 'react';
 import { createMemento } from '../lib/mementos';
 import { todayStr } from '../lib/format';
 import { SELECTABLE_THEMES, getListTheme } from '../lib/listThemes';
+import { ListGlyph } from './ListSticker';
 import styles from './AddMementoForm.module.css';
 
 export default function AddMementoForm({ partnershipId, authorId, existing, visibleRect, onCreated, onClose }) {
@@ -200,7 +201,12 @@ export default function AddMementoForm({ partnershipId, authorId, existing, visi
                         style={listTheme === t.key ? { borderColor: t.accent } : undefined}
                         onClick={() => setListTheme(t.key)}
                       >
-                        <span className={styles.themeEmoji}>{t.emoji}</span>
+                        <span
+                          className={styles.themeIcon}
+                          style={listTheme === t.key ? { color: t.accent } : undefined}
+                        >
+                          <ListGlyph shape={t.shape} size={20} />
+                        </span>
                         <span className={styles.themeLbl}>{t.label}</span>
                       </button>
                     ))}
