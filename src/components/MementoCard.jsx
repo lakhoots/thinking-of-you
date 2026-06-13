@@ -1,4 +1,5 @@
 import { fmtDate } from '../lib/format';
+import ListSticker from './ListSticker';
 import styles from './MementoCard.module.css';
 
 const CARD_W = 138;
@@ -10,9 +11,11 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
   const scaleX = scaleOverride ?? baseScale ?? 1;
   const scaleY = scaleYOverride ?? baseScaleY ?? 1;
   const isNote = type === 'note';
+  const isList = type === 'list';
   // Borderless render: transparent-cover photos shed the cream card frame
-  // on the front face only (back stays normal so notes still read).
-  const borderless = type === 'photo' && !!hasTransparency;
+  // on the front face only (back stays normal so notes still read). List
+  // stickers are always frameless — the shape itself is the pin.
+  const borderless = (type === 'photo' && !!hasTransparency) || isList;
 
   // Notes change actual box dimensions so the text reflows and more of it
   // shows when the card grows. Everything else scales uniformly via CSS
@@ -37,8 +40,9 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
 
   return (
     <div
-      className={`${styles.wrap} ${type === 'photo' ? styles.photoCard : ''} ${arrangeMode ? styles.arranging : ''} ${dragging ? styles.dragging : ''} ${selected ? styles.selected : ''} ${borderless ? styles.borderless : ''}`}
+      className={`${styles.wrap} ${type === 'photo' ? styles.photoCard : ''} ${isList ? styles.listCard : ''} ${arrangeMode ? styles.arranging : ''} ${dragging ? styles.dragging : ''} ${selected ? styles.selected : ''} ${borderless ? styles.borderless : ''}`}
       data-card-id={memento.id}
+      data-card-type={type}
       style={{
         left: x - widthPx / 2,
         top: y - heightPx / 2,
@@ -90,6 +94,7 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
                 </div>
               </>
             )}
+            {isList && <ListSticker memento={memento} />}
           </div>
 
           <div className={`${styles.face} ${styles.back}`}>

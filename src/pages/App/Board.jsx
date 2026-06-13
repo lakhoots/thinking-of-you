@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import MementoCard, { CARD_W, CARD_H } from '../../components/MementoCard';
 import MementoDetailSheet from '../../components/MementoDetailSheet';
+import ListSheet from '../../components/ListSheet';
 import { deleteMemento, moveMementos } from '../../lib/mementos';
 import styles from './Board.module.css';
 
@@ -307,13 +308,18 @@ export default function Board({
       return;
     }
 
-    // Tap-to-flip: only when this was the final pointer up, the gesture
-    // never had a second finger, and no movement happened.
+    // Tap: only when this was the final pointer up, the gesture never had a
+    // second finger, and no movement happened. List stickers flip straight
+    // open into their dedicated view; everything else flips in place.
     if (wasLast && !wasMulti && !wasMoved) {
       const el = e.target.closest('[data-card-id]');
       if (el) {
         const id = el.dataset.cardId;
-        setFlippedId((f) => (f === id ? null : id));
+        if (el.dataset.cardType === 'list') {
+          setDetailId(id);
+        } else {
+          setFlippedId((f) => (f === id ? null : id));
+        }
       } else {
         setFlippedId(null);
       }
@@ -601,23 +607,42 @@ export default function Board({
         </div>
       </div>
 
-      {detailId && (
-        <MementoDetailSheet
-          memento={mementos.find((m) => m.id === detailId)}
-          author={authorMap[mementos.find((m) => m.id === detailId)?.author_id]}
-          currentUserId={currentUserProfile?.id}
-          partnershipId={currentUserProfile?.partnership_id}
-          onClose={() => setDetailId(null)}
-          onSaved={(updated) => {
-            onMementoSaved?.(updated);
-            setDetailId(null);
-          }}
-          onDeleteRequested={(id) => {
-            setDetailId(null);
-            requestDelete(id);
-          }}
-        />
-      )}
+      {detailId && (() => {
+        const dm = mementos.find((m) => m.id === detailId);
+        const dAuthor = authorMap[dm?.author_id];
+        if (dm?.type === 'list') {
+          return (
+            <ListSheet
+              memento={dm}
+              author={dAuthor}
+              currentUserId={currentUserProfile?.id}
+              onClose={() => setDetailId(null)}
+              onItemsChanged={(items) => onMementoSaved?.({ id: dm.id, list_items: items })}
+              onDeleteRequested={(id) => {
+                setDetailId(null);
+                requestDelete(id);
+              }}
+            />
+          );
+        }
+        return (
+          <MementoDetailSheet
+            memento={dm}
+            author={dAuthor}
+            currentUserId={currentUserProfile?.id}
+            partnershipId={currentUserProfile?.partnership_id}
+            onClose={() => setDetailId(null)}
+            onSaved={(updated) => {
+              onMementoSaved?.(updated);
+              setDetailId(null);
+            }}
+            onDeleteRequested={(id) => {
+              setDetailId(null);
+              requestDelete(id);
+            }}
+          />
+        );
+      })()}
 
       {pendingDelete && (
         <div className={styles.undoBar} role="status">

@@ -34,13 +34,16 @@ export function pickRotation() {
 export async function listMementos(partnershipId) {
   const { data, error } = await supabase
     .from('mementos')
-    .select('*, photos:memento_photos(id, image_url, position, has_transparency)')
+    .select(
+      '*, photos:memento_photos(id, image_url, position, has_transparency), list_items:memento_list_items(id, text, checked, position)',
+    )
     .eq('partnership_id', partnershipId)
     .order('created_at', { ascending: true });
   if (error) throw error;
   return (data ?? []).map((m) => ({
     ...m,
     photos: (m.photos ?? []).slice().sort((a, b) => a.position - b.position),
+    list_items: (m.list_items ?? []).slice().sort((a, b) => a.position - b.position),
   }));
 }
 
@@ -143,8 +146,62 @@ export async function updateMemento({
 }
 
 export async function deleteMemento(mementoId) {
-  // memento_photos cascades on delete via the FK.
+  // memento_photos and memento_list_items cascade on delete via their FKs.
   const { error } = await supabase.from('mementos').delete().eq('id', mementoId);
+  if (error) throw error;
+}
+
+// ─── Themed-list items ──────────────────────────────────────────────────
+// Items are a shared surface: either partner may add / toggle / edit / remove
+// (partner-scoped RLS), so any of these can be called by either user.
+
+export async function fetchMementoListItems(mementoId) {
+  const { data, error } = await supabase
+    .from('memento_list_items')
+    .select('id, text, checked, position')
+    .eq('memento_id', mementoId)
+    .order('position', { ascending: true });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function addListItem({ mementoId, text, position }) {
+  const { data, error } = await supabase
+    .from('memento_list_items')
+    .insert({ memento_id: mementoId, text, position })
+    .select('id, text, checked, position')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function setListItemChecked(itemId, checked) {
+  const { data, error } = await supabase
+    .from('memento_list_items')
+    .update({ checked })
+    .eq('id', itemId)
+    .select('id, text, checked, position')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateListItemText(itemId, text) {
+  const { data, error } = await supabase
+    .from('memento_list_items')
+    .update({ text })
+    .eq('id', itemId)
+    .select('id, text, checked, position')
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteListItem(itemId) {
+  const { error } = await supabase
+    .from('memento_list_items')
+    .delete()
+    .eq('id', itemId);
   if (error) throw error;
 }
 
@@ -165,15 +222,24 @@ export async function createMemento({
   note,
   emoji,
   photoFile,
+  listTheme,
+  listItems,
   existing,
 }) {
-  // Accept a single file or an array of files for the photo path.
-  const photoFiles = type === 'photo'
-    ? (Array.isArray(photoFile) ? photoFile : (photoFile ? [photoFile] : []))
-    : [];
+  // photoFile carries either the photo stack (type 'photo') or a single
+  // custom sticker image (type 'list'). Normalize to a list of files to
+  // upload; only photos get a memento_photos stack afterward.
+  const isPhoto = type === 'photo';
+  const isList = type === 'list';
+  const incomingFiles = Array.isArray(photoFile)
+    ? photoFile
+    : photoFile ? [photoFile] : [];
+  const filesToUpload = isPhoto
+    ? incomingFiles
+    : isList ? incomingFiles.slice(0, 1) : [];
 
   const uploaded = [];
-  for (const file of photoFiles) {
+  for (const file of filesToUpload) {
     const { blob, hasTransparency } = await compressImageDetailed(file);
     const ext = extForMime(blob.type);
     const path = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -197,8 +263,9 @@ export async function createMemento({
       date,
       title: title || null,
       note: note || null,
-      image_url: uploaded[0]?.url ?? null, // cover (denormalized) for fast board render
+      image_url: uploaded[0]?.url ?? null, // cover (photo) or custom sticker (list)
       emoji: emoji || null,
+      list_theme: isList ? (listTheme || 'generic') : null,
       pos_x: x,
       pos_y: y,
       rotation,
@@ -208,8 +275,10 @@ export async function createMemento({
     .single();
   if (error) throw error;
 
+  // Only photos carry a memento_photos stack; a list's single uploaded image
+  // lives on image_url alone.
   let photos = [];
-  if (uploaded.length) {
+  if (isPhoto && uploaded.length) {
     const rows = uploaded.map((u, i) => ({
       memento_id: memento.id,
       image_url: u.url,
@@ -223,5 +292,21 @@ export async function createMemento({
     if (pErr) throw pErr;
     photos = (photoRows ?? []).slice().sort((a, b) => a.position - b.position);
   }
-  return { ...memento, photos };
+
+  let list_items = [];
+  if (isList && listItems?.length) {
+    const rows = listItems.map((text, i) => ({
+      memento_id: memento.id,
+      text,
+      position: i,
+    }));
+    const { data: itemRows, error: lErr } = await supabase
+      .from('memento_list_items')
+      .insert(rows)
+      .select('id, text, checked, position');
+    if (lErr) throw lErr;
+    list_items = (itemRows ?? []).slice().sort((a, b) => a.position - b.position);
+  }
+
+  return { ...memento, photos, list_items };
 }

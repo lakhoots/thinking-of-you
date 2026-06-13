@@ -84,6 +84,16 @@
 }
 
 
+/* List stickers are frameless and self-styled — the front is just a mount
+   point for the sticker shape, with no cream card, padding, or overflow clip. */
+.listCard .front {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  overflow: visible;
+}
+
 .perspective {
   width: 100%;
   height: 100%;

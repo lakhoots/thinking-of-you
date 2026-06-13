@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
-import { listMementos, fetchMementoPhotos } from '../lib/mementos';
+import { listMementos, fetchMementoPhotos, fetchMementoListItems } from '../lib/mementos';
 
 export function useMementos(partnershipId) {
   const [mementos, setMementos] = useState([]);
@@ -40,8 +40,8 @@ export function useMementos(partnershipId) {
         (payload) => {
           setMementos((prev) => {
             if (prev.some((m) => m.id === payload.new.id)) return prev;
-            // Photos will populate via the memento_photos realtime stream.
-            return [...prev, { ...payload.new, photos: [] }];
+            // Photos / list items populate via their own realtime streams.
+            return [...prev, { ...payload.new, photos: [], list_items: [] }];
           });
         },
       )
@@ -86,6 +86,25 @@ export function useMementos(partnershipId) {
             );
           } catch (err) {
             console.error('memento_photos refetch', err);
+          }
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'memento_list_items' },
+        async (payload) => {
+          // RLS limits these events to our partnership. Refetch the affected
+          // list's items so both partners stay in sync as items are added,
+          // checked off, edited, or removed.
+          const mementoId = payload.new?.memento_id || payload.old?.memento_id;
+          if (!mementoId) return;
+          try {
+            const list_items = await fetchMementoListItems(mementoId);
+            setMementos((prev) =>
+              prev.map((m) => (m.id === mementoId ? { ...m, list_items } : m)),
+            );
+          } catch (err) {
+            console.error('memento_list_items refetch', err);
           }
         },
       )

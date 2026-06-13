@@ -1,0 +1,176 @@
+/* Themed-list board sticker. Fills the 138×170 card; the shape itself is the
+   pin (no cream frame around it). Colour comes from --accent set inline. */
+
+.sticker {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 16px 12px;
+  text-align: center;
+  color: #FBF4E6;
+  background:
+    linear-gradient(155deg, rgba(255, 255, 255, 0.16), rgba(0, 0, 0, 0.12)),
+    var(--accent, #9C5E4A);
+  box-shadow:
+    0 14px 24px rgba(32, 19, 6, 0.26),
+    0 4px 8px rgba(32, 19, 6, 0.18);
+  position: relative;
+  overflow: hidden;
+}
+
+.emoji {
+  font-size: 40px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.25));
+}
+
+.name {
+  font-family: var(--serif);
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.2;
+  max-height: 2.4em;
+  overflow: hidden;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.22);
+}
+
+.meta {
+  font-family: var(--sans);
+  font-size: 9px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+/* ── Ticket (movies): rounded stub with a perforated tear line and side
+      notches punched out of the accent fill. ── */
+.ticket {
+  border-radius: 10px;
+}
+
+.ticket::before {
+  /* perforation line below the header */
+  content: '';
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  top: 70px;
+  border-top: 2px dashed rgba(251, 244, 230, 0.5);
+}
+
+.ticket::after {
+  /* side notches via two radial gradients pinned to the tear line */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at left 70px, var(--bg, #F4ECD8) 7px, transparent 7.5px),
+    radial-gradient(circle at right 70px, var(--bg, #F4ECD8) 7px, transparent 7.5px);
+  pointer-events: none;
+}
+
+/* ── Recipe card (dishes): paper card with a ruled header band. ── */
+.card {
+  border-radius: 6px;
+  justify-content: flex-start;
+  padding-top: 30px;
+}
+
+.card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 20px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.card::after {
+  /* faint ruled lines under the title, like a recipe card */
+  content: '';
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 16px;
+  height: 34px;
+  background-image: repeating-linear-gradient(
+    rgba(251, 244, 230, 0) 0px,
+    rgba(251, 244, 230, 0) 10px,
+    rgba(251, 244, 230, 0.32) 11px
+  );
+  pointer-events: none;
+}
+
+/* ── Label (books / places / generic): luggage tag with a punched hole and a
+      clipped top-left corner. ── */
+.label {
+  border-radius: 8px;
+  clip-path: polygon(18px 0, 100% 0, 100% 100%, 0 100%, 0 18px);
+}
+
+.label::before {
+  /* punched hole near the clipped corner */
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 10px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--bg, #F4ECD8);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Custom uploaded image — frameless, like a transparent-PNG photo. ── */
+.customWrap {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.customImg {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  object-fit: contain;
+  filter: drop-shadow(0 6px 10px rgba(32, 19, 6, 0.28));
+}
+
+.customCaption {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  background: rgba(26, 18, 8, 0.72);
+  max-width: 100%;
+}
+
+.customTitle {
+  font-family: var(--serif);
+  font-size: 11px;
+  font-weight: 600;
+  color: #FBF4E6;
+  line-height: 1.15;
+  max-width: 110px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.customMeta {
+  font-size: 7.5px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(251, 244, 230, 0.7);
+}
