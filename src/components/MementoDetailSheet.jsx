@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import { fmtDate } from '../lib/format';
 import { updateMemento } from '../lib/mementos';
+import PhotoLightbox from './PhotoLightbox';
+import { fallbackToFull } from '../lib/thumbFallback';
 import styles from './MementoDetailSheet.module.css';
 
 export default function MementoDetailSheet({
@@ -24,6 +26,7 @@ export default function MementoDetailSheet({
   const [newPhotoPreviews, setNewPhotoPreviews] = useState([]);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [lightboxIdx, setLightboxIdx] = useState(null);
 
   useEffect(() => {
     const onKey = (e) => {
@@ -46,7 +49,7 @@ export default function MementoDetailSheet({
   const photos = memento.photos?.length
     ? memento.photos
     : image_url
-      ? [{ id: 'cover', image_url, position: 0 }]
+      ? [{ id: 'cover', image_url, thumb_url: memento.thumb_url, position: 0 }]
       : [];
   const authorName = author?.name || '';
   const authorColor = author?.accent_color || '#9C5E4A';
@@ -167,9 +170,16 @@ export default function MementoDetailSheet({
                 className={styles.carousel}
                 onScroll={onCarouselScroll}
               >
-                {photos.map((p) => (
+                {photos.map((p, i) => (
                   <div key={p.id} className={styles.slide}>
-                    <img src={p.image_url} alt="" />
+                    <button
+                      type="button"
+                      className={styles.photoButton}
+                      onClick={() => setLightboxIdx(i)}
+                      aria-label="View photo larger"
+                    >
+                      <img src={p.image_url} alt="" />
+                    </button>
                   </div>
                 ))}
               </div>
@@ -218,7 +228,7 @@ export default function MementoDetailSheet({
           <div className={styles.editPhotos}>
             {keepPhotos.map((p) => (
               <div key={p.id} className={styles.editPhotoItem}>
-                <img src={p.image_url} alt="" />
+                <img src={p.thumb_url || p.image_url} alt="" onError={fallbackToFull(p.image_url)} />
                 <button
                   type="button"
                   className={styles.editPhotoRemove}
@@ -338,6 +348,14 @@ export default function MementoDetailSheet({
           </div>
         )}
       </div>
+      {lightboxIdx !== null && (
+        <PhotoLightbox
+          photos={photos}
+          initialIndex={lightboxIdx}
+          label="Board photo"
+          onClose={() => setLightboxIdx(null)}
+        />
+      )}
     </div>
   );
 }

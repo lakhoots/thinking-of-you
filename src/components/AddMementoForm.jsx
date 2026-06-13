@@ -4,7 +4,7 @@ import { todayStr } from '../lib/format';
 import { SELECTABLE_THEMES, getListTheme } from '../lib/listThemes';
 import styles from './AddMementoForm.module.css';
 
-export default function AddMementoForm({ partnershipId, authorId, existing, onCreated, onClose }) {
+export default function AddMementoForm({ partnershipId, authorId, existing, visibleRect, onCreated, onClose }) {
   const [type, setType] = useState(null);
   const [date, setDate] = useState(todayStr());
   const [title, setTitle] = useState('');
@@ -89,6 +89,7 @@ export default function AddMementoForm({ partnershipId, authorId, existing, onCr
         listTheme,
         listItems: type === 'list' ? items : undefined,
         existing,
+        visibleRect,
       });
       onCreated(m);
     } catch (err) {

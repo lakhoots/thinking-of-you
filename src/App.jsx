@@ -62,19 +62,30 @@ export default function App() {
     };
   }, []);
 
-  // Pin chrome (header / nav / rotateBar / modals) to the visual viewport.
-  // When the page is pinch-zoomed, the layout viewport stays put but the
-  // visual viewport shifts and shrinks — without this, position:fixed bars
-  // anchored to layout edges drift off-screen.
+  // The whole UI — app chrome and most modal sheets — is sized in static,
+  // keyboard-independent CSS (dvh), so the on-screen keyboard simply overlays a
+  // motionless UI instead of reshaping it. The two bits of JS here: track
+  // --kb-vh (height above the keyboard) for compact sheets that need to lift
+  // fully above it, and pin the fixed overlays to the visual viewport while
+  // pinch-zoomed so they don't drift off a zoomed page.
   useEffect(() => {
     const vv = window.visualViewport;
-    if (!vv) return;
+    if (!vv) return undefined;
     const root = document.documentElement;
     const update = () => {
-      root.style.setProperty('--vv-x', `${vv.offsetLeft}px`);
-      root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
-      root.style.setProperty('--vv-w', `${vv.width}px`);
-      root.style.setProperty('--vv-h', `${vv.height}px`);
+      root.style.setProperty('--kb-vh', `${vv.height}px`);
+
+      if (vv.scale > 1.01) {
+        root.style.setProperty('--vv-x', `${vv.offsetLeft}px`);
+        root.style.setProperty('--vv-y', `${vv.offsetTop}px`);
+        root.style.setProperty('--vv-w', `${vv.width}px`);
+        root.style.setProperty('--vv-h', `${vv.height}px`);
+      } else {
+        // Hand the overlays back to the static dvh-based defaults in tokens.css.
+        for (const v of ['--vv-x', '--vv-y', '--vv-w', '--vv-h']) {
+          root.style.removeProperty(v);
+        }
+      }
     };
     update();
     vv.addEventListener('resize', update);

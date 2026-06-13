@@ -3,7 +3,7 @@
   top: var(--vv-y, 0px);
   left: var(--vv-x, 0px);
   width: var(--vv-w, 100%);
-  height: var(--vv-h, 100vh);
+  height: 100dvh;
   background: rgba(26, 18, 8, 0.55);
   z-index: 300;
   display: flex;
@@ -129,11 +129,25 @@
   max-height: 50vh;
 }
 
+.photoButton {
+  width: 100%;
+  max-height: 50vh;
+  border: none;
+  padding: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: zoom-in;
+}
+
 .slide img {
   width: 100%;
   max-height: 50vh;
   object-fit: contain;
   display: block;
+  pointer-events: none;
+  user-select: none;
 }
 
 .pips {

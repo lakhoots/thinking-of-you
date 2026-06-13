@@ -8,6 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "generate-icons": "node scripts/generate-icons.js",
     "db:status": "node scripts/db.mjs migration list",
     "db:push": "node scripts/db.mjs db push"
   },
@@ -27,6 +28,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.6.0",
+    "sharp": "^0.34.5",
     "vite": "^8.0.12"
   }
 }

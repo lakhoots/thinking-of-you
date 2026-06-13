@@ -1,16 +1,12 @@
 .header {
-  position: fixed;
-  top: var(--vv-y, 0px);
-  left: var(--vv-x, 0px);
-  width: var(--vv-w, 100%);
-  height: 52px;
+  flex-shrink: 0;
+  height: var(--header-h);
   background: var(--bg);
   border-bottom: 1px solid var(--border);
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 0 20px;
-  z-index: 50;
 }
 
 .title {
@@ -110,8 +106,10 @@
 .headerCancel:disabled,
 .headerDone:disabled { opacity: 0.45; cursor: default; }
 
+/* In arrange mode the nav is removed, so the flex:1 viewport fills the space
+   automatically — no height override needed. */
 .viewportArrange {
-  height: calc(var(--vv-h, 100vh) - 52px); /* NavBar is hidden in arrange mode */
+  flex: 1;
 }
 
 .rotateBar {
@@ -202,11 +200,9 @@
 .rotateReset:hover { background: rgba(255, 255, 255, 0.08); }
 
 .viewport {
-  position: fixed;
-  top: calc(var(--vv-y, 0px) + 52px);
-  left: var(--vv-x, 0px);
-  width: var(--vv-w, 100%);
-  height: calc(var(--vv-h, 100vh) - 52px - 72px);
+  position: relative;
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
   touch-action: none;
   background: var(--bg-raised);
@@ -269,7 +265,7 @@
 
 .undoBar {
   position: fixed;
-  top: calc(var(--vv-y, 0px) + var(--vv-h, 100vh) - 88px);
+  top: calc(var(--vv-y, 0px) + var(--vv-h, 100vh) - var(--nav-h) - env(safe-area-inset-bottom, 0px) - 16px);
   left: calc(var(--vv-x, 0px) + var(--vv-w, 100%) / 2);
   transform: translate(-50%, -100%);
   background: rgba(26, 18, 8, 0.92);

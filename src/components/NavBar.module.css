@@ -1,13 +1,11 @@
 .nav {
-  position: fixed;
-  top: calc(var(--vv-y, 0px) + var(--vv-h, 100vh) - 72px);
-  left: var(--vv-x, 0px);
-  width: var(--vv-w, 100%);
-  height: 72px;
+  flex-shrink: 0;
+  width: 100%;
+  height: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   background: var(--chain);
   display: flex;
   align-items: center;
-  z-index: 100;
 }
 
 .tab {
@@ -15,8 +13,8 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 10px;
+  gap: 4px;
+  padding: 12px 10px;
   cursor: pointer;
 }
 
@@ -33,35 +31,34 @@
 .icon {
   font-size: 17px;
   color: var(--chain-text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .tab.on .icon { color: rgba(240,230,208,0.88); }
 
-.addWrap {
-  position: absolute;
-  left: 50%;
-  top: -22px;
-  transform: translateX(-50%);
-  z-index: 101;
-}
-
 .addBtn {
-  width: 44px;
-  height: 44px;
+  position: absolute;
+  right: 18px;
+  bottom: calc(var(--nav-h) + env(safe-area-inset-bottom, 0px) + 16px);
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background: var(--chain);
-  color: rgba(240,230,208,0.95);
-  border: 3px solid var(--bg-raised);
+  color: rgba(240, 230, 208, 0.95);
+  border: none;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 22px;
+  font-size: 26px;
   font-weight: 300;
   cursor: pointer;
-  box-shadow: 0 4px 18px rgba(26,18,8,0.35);
+  box-shadow: 0 8px 22px rgba(26, 18, 8, 0.34), 0 2px 6px rgba(26, 18, 8, 0.2);
   font-family: var(--sans);
   line-height: 1;
+  z-index: 101;
   transition: transform 0.18s;
 }
 
-.addBtn:active { transform: scale(1.12); }
+.addBtn:active { transform: scale(0.94); }

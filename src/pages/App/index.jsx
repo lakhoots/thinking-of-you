@@ -1,14 +1,18 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { usePartnership } from '../../hooks/usePartnership';
 import { useMementos } from '../../hooks/useMementos';
 import { useSparks } from '../../hooks/useSparks';
+import { useFavorites } from '../../hooks/useFavorites';
+import { backfillThumbnails } from '../../lib/backfillThumbs';
 import NavBar from '../../components/NavBar';
 import AddMementoForm from '../../components/AddMementoForm';
 import AddSparkForm from '../../components/AddSparkForm';
+import AddFavoriteForm from '../../components/AddFavoriteForm';
 import SettingsSheet from '../../components/SettingsSheet';
 import Board from './Board';
 import Sparks from './Sparks';
+import Favorites from './Favorites';
 import shellStyles from './AppShell.module.css';
 
 export default function AppShell({ user, profile, onProfileChange }) {
@@ -18,19 +22,47 @@ export default function AppShell({ user, profile, onProfileChange }) {
   const [lastAddedId, setLastAddedId] = useState(null);
   const [boardArranging, setBoardArranging] = useState(false);
   const [sparkEditing, setSparkEditing] = useState(false);
+  const [addVisibleRect, setAddVisibleRect] = useState(null);
+  const boardVisibleRectRef = useRef(null);
 
   const { partnership, partners, refresh: refreshPartnership } = usePartnership(profile.partnership_id);
-  const { mementos, addLocal, updateLocal, removeLocal } = useMementos(profile.partnership_id);
+  const { mementos, loading: mementosLoading, addLocal, updateLocal, removeLocal } = useMementos(profile.partnership_id);
   const {
     sparks,
+    loading: sparksLoading,
     addLocal: addSparkLocal,
     updateLocal: updateSparkLocal,
     addCommentLocal: addSparkCommentLocal,
     markSeenLocal: markSparkSeenLocal,
     removeLocal: removeSparkLocal,
+    refresh: refreshSparks,
   } = useSparks(profile.partnership_id);
+  const {
+    favorites,
+    addLocal: addFavoriteLocal,
+    refresh: refreshFavorites,
+  } = useFavorites(profile.partnership_id);
 
   const partnerJoined = !!(partnership?.partner_a_id && partnership?.partner_b_id);
+  const setBoardVisibleRect = useCallback((rect) => {
+    boardVisibleRectRef.current = rect;
+  }, []);
+
+  // One-time pass to generate thumbnails for content created before
+  // thumb_url existed. Runs once both lists have loaded; realtime updates
+  // refresh the board/feed as each thumb lands.
+  const backfilledRef = useRef(false);
+  useEffect(() => {
+    if (backfilledRef.current || mementosLoading || sparksLoading) return;
+    backfilledRef.current = true;
+    backfillThumbnails({ mementos, sparks, currentUserId: user.id })
+      .catch((err) => console.warn('thumb backfill', err));
+  }, [mementosLoading, sparksLoading, mementos, sparks, user.id]);
+
+  useEffect(() => {
+    if (tab === 'sparks') refreshSparks();
+    if (tab === 'favorites') refreshFavorites();
+  }, [tab, refreshSparks, refreshFavorites]);
 
   // If the partnership has only one member, show the waiting state instead of the app.
   if (partnership && !partnerJoined) {
@@ -48,52 +80,77 @@ export default function AppShell({ user, profile, onProfileChange }) {
     setShowAdd(false);
   };
 
+  const onFavoriteCreated = (f) => {
+    addFavoriteLocal(f);
+    setShowAdd(false);
+  };
+
   const openSettings = () => setShowSettings(true);
+
+  const openBoardAdd = () => {
+    setAddVisibleRect(boardVisibleRectRef.current);
+    setShowAdd(true);
+  };
 
   return (
     <>
-      {tab === 'board' && (
-        <Board
-          mementos={mementos}
-          partners={partners}
-          partnershipLabel={partnership?.label ?? ''}
-          lastAddedId={lastAddedId}
-          currentUserProfile={profile}
-          onOpenSettings={openSettings}
-          onMementoSaved={updateLocal}
-          onMementoRemoved={removeLocal}
-          onMementoRestored={addLocal}
-          onArrangeModeChange={setBoardArranging}
-        />
-      )}
-      {tab === 'sparks' && (
-        <Sparks
-          sparks={sparks}
-          partners={partners}
-          currentUserProfile={profile}
-          onOpenSettings={openSettings}
-          onSparkUpdated={updateSparkLocal}
-          onSparkCommentAdded={addSparkCommentLocal}
-          onSparkSeen={markSparkSeenLocal}
-          onSparkRemoved={removeSparkLocal}
-          onSparkRestored={addSparkLocal}
-          onEditOpenChange={setSparkEditing}
-        />
-      )}
+      <div className={shellStyles.shell}>
+        {tab === 'board' && (
+          <Board
+            mementos={mementos}
+            partners={partners}
+            partnershipLabel={partnership?.label ?? ''}
+            lastAddedId={lastAddedId}
+            currentUserProfile={profile}
+            onOpenSettings={openSettings}
+            onMementoSaved={updateLocal}
+            onMementoRemoved={removeLocal}
+            onMementoRestored={addLocal}
+            onArrangeModeChange={setBoardArranging}
+            onVisibleRectChange={setBoardVisibleRect}
+          />
+        )}
+        {tab === 'sparks' && (
+          <Sparks
+            sparks={sparks}
+            partners={partners}
+            currentUserProfile={profile}
+            onOpenSettings={openSettings}
+            onSparkUpdated={updateSparkLocal}
+            onSparkCommentAdded={addSparkCommentLocal}
+            onSparkSeen={markSparkSeenLocal}
+            onSparkRemoved={removeSparkLocal}
+            onSparkRestored={addSparkLocal}
+            onEditOpenChange={setSparkEditing}
+          />
+        )}
+        {tab === 'favorites' && (
+          <Favorites
+            favorites={favorites}
+            partners={partners}
+            currentUserProfile={profile}
+            onOpenSettings={openSettings}
+            onUpdateRequest={() => setShowAdd(true)}
+          />
+        )}
 
-      {!boardArranging && !sparkEditing && !(showAdd && tab === 'sparks') && (
-        <NavBar
-          tab={tab}
-          onTab={setTab}
-          onAdd={() => setShowAdd(true)}
-        />
-      )}
+        {!boardArranging
+          && !sparkEditing
+          && !(showAdd && (tab === 'sparks' || tab === 'favorites')) && (
+          <NavBar
+            tab={tab}
+            onTab={setTab}
+            onAdd={tab === 'board' ? openBoardAdd : () => setShowAdd(true)}
+          />
+        )}
+      </div>
 
       {showAdd && tab === 'board' && (
         <AddMementoForm
           partnershipId={profile.partnership_id}
           authorId={user.id}
           existing={mementos}
+          visibleRect={addVisibleRect}
           onCreated={onCreated}
           onClose={() => setShowAdd(false)}
         />
@@ -104,6 +161,15 @@ export default function AppShell({ user, profile, onProfileChange }) {
           partnershipId={profile.partnership_id}
           authorId={user.id}
           onCreated={onSparkCreated}
+          onClose={() => setShowAdd(false)}
+        />
+      )}
+
+      {showAdd && tab === 'favorites' && (
+        <AddFavoriteForm
+          partnershipId={profile.partnership_id}
+          authorId={user.id}
+          onCreated={onFavoriteCreated}
           onClose={() => setShowAdd(false)}
         />
       )}

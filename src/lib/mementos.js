@@ -1,10 +1,129 @@
 import { supabase } from './supabase';
-import { compressImageDetailed, extForMime } from './image';
+import { compressImageWithThumb, extForMime } from './image';
+
+const BOARD_W = 3200;
+const BOARD_H = 2600;
+const CARD_W = 138;
+const CARD_H = 170;
+const PIN_PAD_X = 0.018;
+const PIN_PAD_Y = 0.024;
+
+function clamp(n, min, max) {
+  return Math.max(min, Math.min(max, n));
+}
+
+async function uploadMementoPhoto(partnershipId, file) {
+  const { blob, thumbBlob, hasTransparency } = await compressImageWithThumb(file);
+  const ext = extForMime(blob.type);
+  const base = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const path = `${base}.${ext}`;
+  const { error: upErr } = await supabase.storage
+    .from('mementos')
+    .upload(path, blob, { contentType: blob.type, upsert: false });
+  if (upErr) throw upErr;
+  const { data: pub } = supabase.storage.from('mementos').getPublicUrl(path);
+
+  // The thumbnail is optional — if it didn't generate or fails to upload,
+  // post the full image with no thumb_url and let the UI fall back to it.
+  let thumbUrl = null;
+  if (thumbBlob) {
+    const thumbPath = `${base}-thumb.${ext}`;
+    const { error: thumbErr } = await supabase.storage
+      .from('mementos')
+      .upload(thumbPath, thumbBlob, { contentType: thumbBlob.type, upsert: false });
+    if (thumbErr) {
+      console.warn('memento thumbnail upload failed; using full image', thumbErr);
+    } else {
+      thumbUrl = supabase.storage.from('mementos').getPublicUrl(thumbPath).data.publicUrl;
+    }
+  }
+  return { url: pub.publicUrl, thumbUrl, hasTransparency };
+}
+
+function pinRectAt(x, y, m = {}) {
+  const scaleX = m.scale ?? 1;
+  const scaleY = m.type === 'note' ? (m.scale_y ?? scaleX) : scaleX;
+  const rotation = ((m.rotation ?? 0) * Math.PI) / 180;
+  const w = (CARD_W * scaleX) / BOARD_W;
+  const h = (CARD_H * scaleY) / BOARD_H;
+  const cos = Math.abs(Math.cos(rotation));
+  const sin = Math.abs(Math.sin(rotation));
+  const halfW = ((w * cos) + (h * sin)) / 2 + PIN_PAD_X;
+  const halfH = ((w * sin) + (h * cos)) / 2 + PIN_PAD_Y;
+  return {
+    minX: x - halfW,
+    maxX: x + halfW,
+    minY: y - halfH,
+    maxY: y + halfH,
+  };
+}
+
+function rectOverlapArea(a, b) {
+  const w = Math.max(0, Math.min(a.maxX, b.maxX) - Math.max(a.minX, b.minX));
+  const h = Math.max(0, Math.min(a.maxY, b.maxY) - Math.max(a.minY, b.minY));
+  return w * h;
+}
+
+function rectDistance(a, b) {
+  const dx = Math.max(0, Math.max(a.minX - b.maxX, b.minX - a.maxX));
+  const dy = Math.max(0, Math.max(a.minY - b.maxY, b.minY - a.maxY));
+  return Math.hypot(dx, dy);
+}
 
 // Pick a position for a new memento in normalized (0–1, 0–1) coords.
-// Tries to stay at least `minSpacing` away from existing items; falls back
-// to a jittered spot near the centre after enough failed attempts.
-export function pickPosition(existing, minSpacing = 0.08) {
+// If a visible board rect is provided, prefer the most spacious point inside
+// the current zoomed area; when crowded, pick the least-covering overlap.
+export function pickPosition(existing, minSpacing = 0.08, visibleRect = null, type = 'photo') {
+  if (visibleRect) {
+    const marginX = (CARD_W / BOARD_W) / 2 + PIN_PAD_X;
+    const marginY = (CARD_H / BOARD_H) / 2 + PIN_PAD_Y;
+    const rect = {
+      minX: clamp(visibleRect.minX + marginX, 0.05, 0.95),
+      maxX: clamp(visibleRect.maxX - marginX, 0.05, 0.95),
+      minY: clamp(visibleRect.minY + marginY, 0.05, 0.95),
+      maxY: clamp(visibleRect.maxY - marginY, 0.05, 0.95),
+    };
+
+    if (rect.minX <= rect.maxX && rect.minY <= rect.maxY) {
+      const existingRects = existing.map((m) => pinRectAt(m.pos_x, m.pos_y, m));
+      let best = null;
+      const candidates = [];
+      const stepsX = 7;
+      const stepsY = 7;
+
+      for (let ix = 0; ix < stepsX; ix++) {
+        for (let iy = 0; iy < stepsY; iy++) {
+          candidates.push({
+            x: rect.minX + ((ix + 0.5) / stepsX) * (rect.maxX - rect.minX),
+            y: rect.minY + ((iy + 0.5) / stepsY) * (rect.maxY - rect.minY),
+          });
+        }
+      }
+      for (let i = 0; i < 90; i++) {
+        candidates.push({
+          x: rect.minX + Math.random() * (rect.maxX - rect.minX),
+          y: rect.minY + Math.random() * (rect.maxY - rect.minY),
+        });
+      }
+
+      for (const c of candidates) {
+        for (const rotation of [-7, -4, 0, 4, 7]) {
+          const candidateRect = pinRectAt(c.x, c.y, { type, scale: 1, scale_y: 1, rotation });
+          const overlap = existingRects.reduce((sum, r) => sum + rectOverlapArea(candidateRect, r), 0);
+          const nearest = existingRects.length
+            ? Math.min(...existingRects.map((r) => rectDistance(candidateRect, r)))
+            : 1;
+          const centerBias = Math.hypot(c.x - ((rect.minX + rect.maxX) / 2), c.y - ((rect.minY + rect.maxY) / 2));
+          const rotationBias = Math.abs(rotation) * 0.0002;
+          const score = overlap * 1000 - nearest + centerBias * 0.02 + rotationBias;
+          if (!best || score < best.score) best = { ...c, rotation, score, overlap, nearest };
+        }
+      }
+
+      if (best) return { x: best.x, y: best.y, rotation: best.rotation };
+    }
+  }
+
   // Spread outward from the centre as the board fills up.
   const spread = 0.04 + existing.length * 0.025;
   for (let i = 0; i < 80; i++) {
@@ -35,7 +154,7 @@ export async function listMementos(partnershipId) {
   const { data, error } = await supabase
     .from('mementos')
     .select(
-      '*, photos:memento_photos(id, image_url, position, has_transparency), list_items:memento_list_items(id, text, checked, position)',
+      '*, photos:memento_photos(id, image_url, thumb_url, position, has_transparency), list_items:memento_list_items(id, text, checked, position)',
     )
     .eq('partnership_id', partnershipId)
     .order('created_at', { ascending: true });
@@ -50,7 +169,7 @@ export async function listMementos(partnershipId) {
 export async function fetchMementoPhotos(mementoId) {
   const { data, error } = await supabase
     .from('memento_photos')
-    .select('id, image_url, position, has_transparency')
+    .select('id, image_url, thumb_url, position, has_transparency')
     .eq('memento_id', mementoId)
     .order('position', { ascending: true });
   if (error) throw error;
@@ -72,15 +191,7 @@ export async function updateMemento({
   // 1. Upload any new files.
   const uploaded = [];
   for (const file of newPhotoFiles ?? []) {
-    const { blob, hasTransparency } = await compressImageDetailed(file);
-    const ext = extForMime(blob.type);
-    const path = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from('mementos')
-      .upload(path, blob, { contentType: blob.type, upsert: false });
-    if (upErr) throw upErr;
-    const { data: pub } = supabase.storage.from('mementos').getPublicUrl(path);
-    uploaded.push({ url: pub.publicUrl, hasTransparency });
+    uploaded.push(await uploadMementoPhoto(partnershipId, file));
   }
 
   // 2. Delete photos the caller dropped.
@@ -118,6 +229,7 @@ export async function updateMemento({
     const rows = uploaded.map((u, i) => ({
       memento_id: mementoId,
       image_url: u.url,
+      thumb_url: u.thumbUrl,
       position: startPos + i,
       has_transparency: u.hasTransparency,
     }));
@@ -131,6 +243,7 @@ export async function updateMemento({
   const finalPatch = { ...patch };
   if (keepPhotoIds || uploaded.length) {
     finalPatch.image_url = photos[0]?.image_url ?? null;
+    finalPatch.thumb_url = photos[0]?.thumb_url ?? null;
     finalPatch.has_transparency = photos[0]?.has_transparency ?? false;
   }
 
@@ -225,6 +338,7 @@ export async function createMemento({
   listTheme,
   listItems,
   existing,
+  visibleRect,
 }) {
   // photoFile carries either the photo stack (type 'photo') or a single
   // custom sticker image (type 'list'). Normalize to a list of files to
@@ -240,19 +354,12 @@ export async function createMemento({
 
   const uploaded = [];
   for (const file of filesToUpload) {
-    const { blob, hasTransparency } = await compressImageDetailed(file);
-    const ext = extForMime(blob.type);
-    const path = `${partnershipId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-    const { error: upErr } = await supabase.storage
-      .from('mementos')
-      .upload(path, blob, { contentType: blob.type, upsert: false });
-    if (upErr) throw upErr;
-    const { data: pub } = supabase.storage.from('mementos').getPublicUrl(path);
-    uploaded.push({ url: pub.publicUrl, hasTransparency });
+    uploaded.push(await uploadMementoPhoto(partnershipId, file));
   }
 
-  const { x, y } = pickPosition(existing);
-  const rotation = pickRotation();
+  const placement = pickPosition(existing, 0.08, visibleRect, type);
+  const { x, y } = placement;
+  const rotation = placement.rotation ?? pickRotation();
 
   const { data: memento, error } = await supabase
     .from('mementos')
@@ -264,6 +371,7 @@ export async function createMemento({
       title: title || null,
       note: note || null,
       image_url: uploaded[0]?.url ?? null, // cover (photo) or custom sticker (list)
+      thumb_url: uploaded[0]?.thumbUrl ?? null, // small cover for the board pin
       emoji: emoji || null,
       list_theme: isList ? (listTheme || 'generic') : null,
       pos_x: x,
@@ -282,13 +390,14 @@ export async function createMemento({
     const rows = uploaded.map((u, i) => ({
       memento_id: memento.id,
       image_url: u.url,
+      thumb_url: u.thumbUrl,
       position: i,
       has_transparency: u.hasTransparency,
     }));
     const { data: photoRows, error: pErr } = await supabase
       .from('memento_photos')
       .insert(rows)
-      .select('id, image_url, position, has_transparency');
+      .select('id, image_url, thumb_url, position, has_transparency');
     if (pErr) throw pErr;
     photos = (photoRows ?? []).slice().sort((a, b) => a.position - b.position);
   }

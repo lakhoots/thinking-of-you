@@ -123,7 +123,7 @@ export default function Sparks({
           </div>
         </div>
       ) : (
-        <div className={styles.feed}>
+        <div className={styles.feed} data-sparks-feed>
           {grouped.map(([date, items]) => (
             <section key={date} className={styles.group}>
               <div className={styles.dateLabel}>{labelForDate(date)}</div>

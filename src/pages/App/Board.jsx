@@ -10,6 +10,42 @@ const CANVAS_H = 2600;
 const MIN_SCALE = 0.18;
 const MAX_SCALE = 2.0;
 const INITIAL_SCALE = 0.38;
+const FIT_MAX_SCALE = 0.86;
+const FIT_SCREEN_PADDING = 34;
+const PIN_BOUNDS_PAD = 26;
+const DESKTOP_WHEEL_ZOOM_SENSITIVITY = 0.00065;
+
+function boundsForMementos(mementos) {
+  if (!mementos.length) return null;
+
+  return mementos.reduce((bounds, m) => {
+    const x = m.pos_x * CANVAS_W;
+    const y = m.pos_y * CANVAS_H;
+    const scaleX = m.scale ?? 1;
+    const scaleY = m.scale_y ?? 1;
+    const width = CARD_W * scaleX;
+    const height = CARD_H * (m.type === 'note' ? scaleY : scaleX);
+    const rotation = ((m.rotation ?? 0) * Math.PI) / 180;
+    const cos = Math.abs(Math.cos(rotation));
+    const sin = Math.abs(Math.sin(rotation));
+    const halfW = (width * cos + height * sin) / 2 + PIN_BOUNDS_PAD;
+    const halfH = (width * sin + height * cos) / 2 + PIN_BOUNDS_PAD;
+    const next = {
+      minX: x - halfW,
+      minY: y - halfH,
+      maxX: x + halfW,
+      maxY: y + halfH,
+    };
+
+    if (!bounds) return next;
+    return {
+      minX: Math.min(bounds.minX, next.minX),
+      minY: Math.min(bounds.minY, next.minY),
+      maxX: Math.max(bounds.maxX, next.maxX),
+      maxY: Math.max(bounds.maxY, next.maxY),
+    };
+  }, null);
+}
 
 export default function Board({
   mementos,
@@ -22,6 +58,7 @@ export default function Board({
   onMementoRemoved,
   onMementoRestored,
   onArrangeModeChange,
+  onVisibleRectChange,
 }) {
   const [flippedId, setFlippedId] = useState(null);
   const [enteringId, setEnteringId] = useState(null);
@@ -49,6 +86,7 @@ export default function Board({
 
   const canvasRef = useRef(null);
   const viewportRef = useRef(null);
+  const mementosRef = useRef(mementos);
   const tx = useRef({ x: 0, y: 0, s: INITIAL_SCALE });
   const ptrs = useRef(new Map());
   const pinchDist = useRef(null);
@@ -60,11 +98,47 @@ export default function Board({
     if (!canvasRef.current) return;
     const { x, y, s } = tx.current;
     canvasRef.current.style.transform = `translate(${x}px, ${y}px) scale(${s})`;
-  }, []);
+    const vp = viewportRef.current?.getBoundingClientRect();
+    if (vp) {
+      onVisibleRectChange?.({
+        minX: Math.max(0, (-x) / s / CANVAS_W),
+        maxX: Math.min(1, (vp.width - x) / s / CANVAS_W),
+        minY: Math.max(0, (-y) / s / CANVAS_H),
+        maxY: Math.min(1, (vp.height - y) / s / CANVAS_H),
+      });
+    }
+  }, [onVisibleRectChange]);
+
+  useEffect(() => {
+    mementosRef.current = mementos;
+  }, [mementos]);
 
   const centerCanvas = useCallback(() => {
     const vp = viewportRef.current?.getBoundingClientRect();
     if (!vp) return;
+    const bounds = boundsForMementos(mementosRef.current);
+
+    if (bounds) {
+      const boundsW = Math.max(1, bounds.maxX - bounds.minX);
+      const boundsH = Math.max(1, bounds.maxY - bounds.minY);
+      const usableW = Math.max(1, vp.width - FIT_SCREEN_PADDING * 2);
+      const usableH = Math.max(1, vp.height - FIT_SCREEN_PADDING * 2);
+      const s = Math.max(
+        MIN_SCALE,
+        Math.min(FIT_MAX_SCALE, MAX_SCALE, usableW / boundsW, usableH / boundsH),
+      );
+      const centerX = (bounds.minX + bounds.maxX) / 2;
+      const centerY = (bounds.minY + bounds.maxY) / 2;
+
+      tx.current = {
+        x: vp.width / 2 - centerX * s,
+        y: vp.height / 2 - centerY * s,
+        s,
+      };
+      applyTx();
+      return;
+    }
+
     tx.current = {
       x: vp.width / 2 - (CANVAS_W / 2) * INITIAL_SCALE,
       y: vp.height / 2 - (CANVAS_H / 2) * INITIAL_SCALE,
@@ -73,7 +147,7 @@ export default function Board({
     applyTx();
   }, [applyTx]);
 
-  // Initial centering — wait for layout to settle, then again on resize.
+  // Initial fit — wait for layout to settle, then again on resize.
   useEffect(() => {
     const id = requestAnimationFrame(() => centerCanvas());
     const onResize = () => centerCanvas();
@@ -82,29 +156,35 @@ export default function Board({
       cancelAnimationFrame(id);
       window.removeEventListener('resize', onResize);
     };
-  }, [centerCanvas]);
+  }, [centerCanvas, mementos.length]);
 
   // Pan to a freshly added card so the author sees it land.
   useEffect(() => {
     if (!lastAddedId) return;
     const m = mementos.find((x) => x.id === lastAddedId);
     if (!m) return;
-    setEnteringId(lastAddedId);
-    const t = setTimeout(() => setEnteringId(null), 700);
+    let t;
+    const frame = requestAnimationFrame(() => {
+      setEnteringId(lastAddedId);
+      t = setTimeout(() => setEnteringId(null), 700);
 
-    const vp = viewportRef.current?.getBoundingClientRect();
-    if (vp) {
-      const s = Math.max(tx.current.s, 0.52);
-      const px = m.pos_x * CANVAS_W;
-      const py = m.pos_y * CANVAS_H;
-      tx.current = {
-        x: vp.width / 2 - px * s,
-        y: vp.height / 2 - py * s,
-        s,
-      };
-      applyTx();
-    }
-    return () => clearTimeout(t);
+      const vp = viewportRef.current?.getBoundingClientRect();
+      if (vp) {
+        const s = Math.max(tx.current.s, 0.52);
+        const px = m.pos_x * CANVAS_W;
+        const py = m.pos_y * CANVAS_H;
+        tx.current = {
+          x: vp.width / 2 - px * s,
+          y: vp.height / 2 - py * s,
+          s,
+        };
+        applyTx();
+      }
+    });
+    return () => {
+      cancelAnimationFrame(frame);
+      clearTimeout(t);
+    };
   }, [lastAddedId, mementos, applyTx]);
 
   const onPtrDown = useCallback((e) => {
@@ -332,7 +412,12 @@ export default function Board({
     if (!vp) return;
     const onWheel = (e) => {
       e.preventDefault();
-      const factor = e.deltaY > 0 ? 0.91 : 1.1;
+      const deltaY = e.deltaMode === WheelEvent.DOM_DELTA_LINE
+        ? e.deltaY * 16
+        : e.deltaMode === WheelEvent.DOM_DELTA_PAGE
+          ? e.deltaY * vp.clientHeight
+          : e.deltaY;
+      const factor = Math.exp(-deltaY * DESKTOP_WHEEL_ZOOM_SENSITIVITY);
       const oldS = tx.current.s;
       const newS = Math.max(MIN_SCALE, Math.min(MAX_SCALE, oldS * factor));
       tx.current.x = e.clientX - (e.clientX - tx.current.x) * (newS / oldS);

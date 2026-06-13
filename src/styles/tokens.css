@@ -36,4 +36,23 @@
 
   /* Shadows */
   --shadow-card: 0 4px 20px rgba(26,18,8,0.12), 0 1px 4px rgba(26,18,8,0.06);
+
+  /* Chrome heights — referenced from every page so the nav and header
+     stay in sync. The nav extends behind the iOS home indicator via
+     safe-area-inset-bottom; pages subtract it from their viewport. */
+  --header-h: 44px;
+  --nav-h: 80px;
+
+  /* Viewport anchors for fixed overlays (grain, lightbox, undo bars) and the
+     app shell. Deliberately STATIC and keyboard-independent: dvh tracks
+     Safari's toolbar but ignores the on-screen keyboard, so nothing moves and
+     the keyboard simply slides up over the UI and back down. (JS only overrides
+     these while pinch-zoomed, which is otherwise blocked.) */
+  --vv-x: 0px;
+  --vv-y: 0px;
+  --vv-w: 100vw;
+  --vv-h: 100dvh;
+  /* Live height of the area above the keyboard (set from JS). Compact modal
+     sheets use it to lift themselves fully above the keyboard. */
+  --kb-vh: 100dvh;
 }

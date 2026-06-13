@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createSparkComment, markSparkSeen } from '../lib/sparks';
+import PhotoLightbox from './PhotoLightbox';
+import { fallbackToFull } from '../lib/thumbFallback';
 import styles from './SparkCard.module.css';
 
 function fmtTime(iso) {
@@ -22,6 +24,36 @@ function fmtDateTime(iso) {
   }).format(d);
 }
 
+function keepCommentFormVisible(input) {
+  const form = input.closest('form');
+  const feed = input.closest('[data-sparks-feed]');
+  if (!form || !feed) return;
+
+  const align = () => {
+    const formRect = form.getBoundingClientRect();
+    const feedRect = feed.getBoundingClientRect();
+    const bottomSpace = 18;
+    // The feed runs full-height under the on-screen keyboard, so the real
+    // visible bottom is whichever is higher: the feed's edge or the keyboard
+    // top (the visual viewport's bottom).
+    const vv = window.visualViewport;
+    const keyboardTop = vv ? vv.offsetTop + vv.height : feedRect.bottom;
+    const visibleBottom = Math.min(feedRect.bottom, keyboardTop);
+    const overflowBottom = formRect.bottom - (visibleBottom - bottomSpace);
+    const overflowTop = formRect.top - (feedRect.top + 18);
+
+    if (overflowBottom > 0) {
+      feed.scrollBy({ top: overflowBottom, behavior: 'smooth' });
+    } else if (overflowTop < 0) {
+      feed.scrollBy({ top: overflowTop, behavior: 'smooth' });
+    }
+  };
+
+  window.requestAnimationFrame(align);
+  window.setTimeout(align, 180);
+  window.setTimeout(align, 380);
+}
+
 export default function SparkCard({
   spark,
   author,
@@ -40,20 +72,18 @@ export default function SparkCard({
   // for legacy sparks created before spark_photos existed.
   const photos = spark.photos?.length
     ? spark.photos
-    : (spark.image_url ? [{ id: 'cover', image_url: spark.image_url, position: 0 }] : []);
+    : (spark.image_url ? [{ id: 'cover', image_url: spark.image_url, thumb_url: spark.thumb_url, position: 0 }] : []);
 
   const carouselRef = useRef(null);
   const cardRef = useRef(null);
+  const commentInputRef = useRef(null);
   const [activeIdx, setActiveIdx] = useState(0);
   const [comment, setComment] = useState('');
+  const [commentsOpen, setCommentsOpen] = useState(false);
   const [commentBusy, setCommentBusy] = useState(false);
   const [commentError, setCommentError] = useState(null);
   const [lightboxIdx, setLightboxIdx] = useState(null);
   const [seenBusy, setSeenBusy] = useState(false);
-  const gestureRef = useRef(null);
-  const lightboxImageRef = useRef(null);
-  const lightboxTransformRef = useRef({ scale: 1, x: 0, y: 0 });
-  const lightboxRafRef = useRef(null);
 
   const seenByMe = !!spark.views?.some((v) => v.user_id === currentUserId);
   const seenByOthers = useMemo(
@@ -89,6 +119,7 @@ export default function SparkCard({
       });
       onCommentAdded?.(spark.id, created);
       setComment('');
+      setCommentsOpen(true);
     } catch (err) {
       setCommentError(err.message);
     } finally {
@@ -97,95 +128,18 @@ export default function SparkCard({
   };
 
   const comments = spark.comments ?? [];
+  const commentCountLabel = comments.length === 1 ? '1 comment' : `${comments.length} comments`;
 
-  const applyLightboxTransform = () => {
-    lightboxRafRef.current = null;
-    const img = lightboxImageRef.current;
-    if (!img) return;
-    const { scale, x, y } = lightboxTransformRef.current;
-    img.style.transform = `translate3d(${x}px, ${y}px, 0) scale(${scale})`;
-  };
-
-  const setLightboxTransformFast = (next) => {
-    lightboxTransformRef.current = next;
-    if (lightboxRafRef.current) return;
-    lightboxRafRef.current = requestAnimationFrame(applyLightboxTransform);
-  };
-
-  const resetLightboxTransform = () => {
-    if (lightboxRafRef.current) {
-      cancelAnimationFrame(lightboxRafRef.current);
-      lightboxRafRef.current = null;
-    }
-    lightboxTransformRef.current = { scale: 1, x: 0, y: 0 };
-    const img = lightboxImageRef.current;
-    if (img) img.style.transform = 'translate3d(0px, 0px, 0) scale(1)';
+  const toggleComments = () => {
+    setCommentsOpen((open) => !open);
   };
 
   const openLightbox = (idx) => {
-    gestureRef.current = null;
-    resetLightboxTransform();
     setLightboxIdx(idx);
   };
 
   const closeLightbox = () => {
-    gestureRef.current = null;
-    resetLightboxTransform();
     setLightboxIdx(null);
-  };
-
-  const lightboxTouchStart = (e) => {
-    const transform = lightboxTransformRef.current;
-    if (e.touches.length === 2) {
-      const [a, b] = e.touches;
-      gestureRef.current = {
-        type: 'pinch',
-        distance: Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY),
-        scale: transform.scale,
-        x: transform.x,
-        y: transform.y,
-      };
-    } else if (e.touches.length === 1 && transform.scale > 1) {
-      const t = e.touches[0];
-      gestureRef.current = {
-        type: 'pan',
-        startX: t.clientX,
-        startY: t.clientY,
-        scale: transform.scale,
-        x: transform.x,
-        y: transform.y,
-      };
-    }
-  };
-
-  const lightboxTouchMove = (e) => {
-    const gesture = gestureRef.current;
-    if (!gesture) return;
-    e.preventDefault();
-    if (gesture.type === 'pinch' && e.touches.length === 2) {
-      const [a, b] = e.touches;
-      const distance = Math.hypot(a.clientX - b.clientX, a.clientY - b.clientY);
-      const scale = Math.min(4, Math.max(1, gesture.scale * (distance / gesture.distance)));
-      setLightboxTransformFast({
-        scale,
-        x: scale === 1 ? 0 : gesture.x,
-        y: scale === 1 ? 0 : gesture.y,
-      });
-    } else if (gesture.type === 'pan' && e.touches.length === 1) {
-      const t = e.touches[0];
-      const limit = 160 * gesture.scale;
-      setLightboxTransformFast({
-        scale: gesture.scale,
-        x: Math.max(-limit, Math.min(limit, gesture.x + t.clientX - gesture.startX)),
-        y: Math.max(-limit, Math.min(limit, gesture.y + t.clientY - gesture.startY)),
-      });
-    }
-  };
-
-  const lightboxTouchEnd = () => {
-    gestureRef.current = null;
-    const curr = lightboxTransformRef.current;
-    if (curr.scale <= 1.03) resetLightboxTransform();
   };
 
   useEffect(() => {
@@ -236,7 +190,7 @@ export default function SparkCard({
             onClick={() => openLightbox(0)}
             aria-label="View photo larger"
           >
-            <img className={styles.photo} src={photos[0].image_url} alt="" />
+            <img className={styles.photo} src={photos[0].thumb_url || photos[0].image_url} alt="" loading="lazy" decoding="async" onError={fallbackToFull(photos[0].image_url)} />
           </button>
         </div>
       )}
@@ -257,7 +211,7 @@ export default function SparkCard({
                     onClick={() => openLightbox(i)}
                     aria-label="View photo larger"
                   >
-                    <img src={p.image_url} alt="" />
+                    <img src={p.thumb_url || p.image_url} alt="" loading="lazy" decoding="async" onError={fallbackToFull(p.image_url)} />
                   </button>
                 </div>
               ))}
@@ -311,90 +265,91 @@ export default function SparkCard({
         </div>
       )}
 
-      {seenByOthers.length > 0 && (
-        <div className={styles.seenBy}>
-          Seen by {seenByOthers.map((v) => {
-            const viewer = partnersById?.get(v.user_id);
-            return viewer?.name || 'Someone';
-          }).join(', ')}
-        </div>
-      )}
+      <div className={`${styles.comments} ${commentsOpen ? styles.commentsOpen : ''}`}>
+        <div className={styles.commentActionRow}>
+          <button
+            type="button"
+            className={styles.commentToggle}
+            onClick={toggleComments}
+            aria-expanded={commentsOpen}
+          >
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2.15" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z" />
+            </svg>
+            <span>{comments.length > 0 ? commentCountLabel : 'Comment'}</span>
+          </button>
 
-      <div className={styles.comments}>
-        {comments.length > 0 && (
-          <div className={styles.commentList}>
-            {comments.map((c) => {
-              const commenter = partnersById?.get(c.author_id);
-              return (
-                <div key={c.id} className={styles.comment}>
-                  <div
-                    className={styles.commentAvatar}
-                    style={{ background: commenter?.accent_color || '#9C5E4A' }}
-                    aria-hidden
-                  >
-                    {commenter?.photo_url
-                      ? <img src={commenter.photo_url} alt="" />
-                      : (commenter?.name?.[0] || '?').toUpperCase()}
-                  </div>
-                  <div className={styles.commentBubble}>
-                    <div className={styles.commentMeta}>
-                      <span>{commenter?.name || 'Someone'}</span>
-                      <time dateTime={c.created_at}>{fmtDateTime(c.created_at)}</time>
+          {seenByOthers.length > 0 && (
+            <div className={styles.seenBy}>
+              Seen by {seenByOthers.map((v) => {
+                const viewer = partnersById?.get(v.user_id);
+                return viewer?.name || 'Someone';
+              }).join(', ')}
+            </div>
+          )}
+        </div>
+
+        {commentsOpen && (
+          <div className={styles.commentPanel}>
+            {comments.length > 0 && (
+              <div className={styles.commentList}>
+                {comments.map((c) => {
+                  const commenter = partnersById?.get(c.author_id);
+                  return (
+                    <div key={c.id} className={styles.comment}>
+                      <div
+                        className={styles.commentAvatar}
+                        style={{ background: commenter?.accent_color || '#9C5E4A' }}
+                        aria-hidden
+                      >
+                        {commenter?.photo_url
+                          ? <img src={commenter.photo_url} alt="" />
+                          : (commenter?.name?.[0] || '?').toUpperCase()}
+                      </div>
+                      <div className={styles.commentBubble}>
+                        <div className={styles.commentMeta}>
+                          <span>{commenter?.name || 'Someone'}</span>
+                          <time dateTime={c.created_at}>{fmtDateTime(c.created_at)}</time>
+                        </div>
+                        <div className={styles.commentBody}>{c.body}</div>
+                      </div>
                     </div>
-                    <div className={styles.commentBody}>{c.body}</div>
-                  </div>
-                </div>
-              );
-            })}
+                  );
+                })}
+              </div>
+            )}
+
+            <form className={styles.commentForm} onSubmit={submitComment}>
+              <input
+                ref={commentInputRef}
+                className={styles.commentInput}
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                onFocus={(e) => keepCommentFormVisible(e.currentTarget)}
+                onClick={(e) => keepCommentFormVisible(e.currentTarget)}
+                placeholder="Leave a comment…"
+                aria-label="Leave a comment"
+              />
+              <button
+                type="submit"
+                className={styles.commentSubmit}
+                disabled={!comment.trim() || commentBusy}
+              >
+                {commentBusy ? '…' : 'Send'}
+              </button>
+            </form>
+            {commentError && <div className={styles.commentError}>{commentError}</div>}
           </div>
         )}
-
-        <form className={styles.commentForm} onSubmit={submitComment}>
-          <input
-            className={styles.commentInput}
-            value={comment}
-            onChange={(e) => setComment(e.target.value)}
-            placeholder="Leave a comment…"
-            aria-label="Leave a comment"
-          />
-          <button
-            type="submit"
-            className={styles.commentSubmit}
-            disabled={!comment.trim() || commentBusy}
-          >
-            {commentBusy ? '…' : 'Send'}
-          </button>
-        </form>
-        {commentError && <div className={styles.commentError}>{commentError}</div>}
       </div>
 
       {lightboxIdx !== null && (
-        <div
-          className={styles.lightbox}
-          role="dialog"
-          aria-modal="true"
-          aria-label="Spark photo"
-          onClick={closeLightbox}
-          onTouchStart={lightboxTouchStart}
-          onTouchMove={lightboxTouchMove}
-          onTouchEnd={lightboxTouchEnd}
-        >
-          <button
-            type="button"
-            className={styles.lightboxClose}
-            onClick={closeLightbox}
-            aria-label="Close photo"
-          >
-            ×
-          </button>
-          <img
-            ref={lightboxImageRef}
-            className={styles.lightboxImage}
-            src={photos[lightboxIdx]?.image_url}
-            alt=""
-            onClick={(e) => e.stopPropagation()}
-          />
-        </div>
+        <PhotoLightbox
+          photos={photos}
+          initialIndex={lightboxIdx}
+          label="Spark photo"
+          onClose={closeLightbox}
+        />
       )}
     </article>
   );
