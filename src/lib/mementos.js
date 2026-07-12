@@ -151,18 +151,40 @@ export function pickRotation() {
 }
 
 export async function listMementos(partnershipId) {
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from('mementos')
     .select(
-      '*, photos:memento_photos(id, image_url, thumb_url, position, has_transparency), list_items:memento_list_items(id, text, checked, position)',
+      '*, photos:memento_photos(id, image_url, thumb_url, position, has_transparency), list_items:memento_list_items(id, text, checked, position), stickers:stickers(id, memento_id, author_id, emoji, caption, anchor_x, anchor_y, rotation, created_at)',
     )
     .eq('partnership_id', partnershipId)
     .order('created_at', { ascending: true });
+
+  // Graceful fallback while the stickers migration hasn't reached this
+  // database yet (same pattern as listSparks with spark_comments/views).
+  if (error && (
+    error.code === 'PGRST200' ||
+    error.code === '42P01' ||
+    error.message?.includes('stickers')
+  )) {
+    const fallback = await supabase
+      .from('mementos')
+      .select(
+        '*, photos:memento_photos(id, image_url, thumb_url, position, has_transparency), list_items:memento_list_items(id, text, checked, position)',
+      )
+      .eq('partnership_id', partnershipId)
+      .order('created_at', { ascending: true });
+    data = fallback.data;
+    error = fallback.error;
+  }
+
   if (error) throw error;
   return (data ?? []).map((m) => ({
     ...m,
     photos: (m.photos ?? []).slice().sort((a, b) => a.position - b.position),
     list_items: (m.list_items ?? []).slice().sort((a, b) => a.position - b.position),
+    stickers: (m.stickers ?? []).slice().sort((a, b) =>
+      (a.created_at < b.created_at ? -1 : 1),
+    ),
   }));
 }
 
@@ -432,5 +454,5 @@ export async function createMemento({
     list_items = (itemRows ?? []).slice().sort((a, b) => a.position - b.position);
   }
 
-  return { ...memento, photos, list_items };
+  return { ...memento, photos, list_items, stickers: [] };
 }
