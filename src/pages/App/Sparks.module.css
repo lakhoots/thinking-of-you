@@ -24,6 +24,29 @@
   color: var(--ink);
 }
 
+.headerRight {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.skyBtn {
+  width: 28px;
+  height: 28px;
+  border: 1px solid var(--border-strong);
+  background: none;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--ink-dim);
+  cursor: pointer;
+  padding: 0;
+  flex-shrink: 0;
+}
+
+.skyBtn:hover { color: var(--ink); }
+
 .meAvatar {
   width: 28px;
   height: 28px;
