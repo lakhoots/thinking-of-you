@@ -152,8 +152,10 @@ export default function SparksSky({ sparks, profiles, onClose }) {
                     >
                       {/* invisible hit area — ≥32px on a phone-width sky */}
                       <circle cx={cx} cy={cy} r="15" fill="transparent" />
-                      <circle cx={cx} cy={cy} r="7" fill={color} opacity="0.22" />
-                      <circle cx={cx} cy={cy} r="3.2" fill={color} />
+                      {/* fill via style: var() tokens don't resolve in SVG
+                          presentation attributes */}
+                      <circle cx={cx} cy={cy} r="7" style={{ fill: color }} opacity="0.22" />
+                      <circle cx={cx} cy={cy} r="3.2" style={{ fill: color }} />
                       <circle cx={cx} cy={cy} r="1.1" fill="#F0E6D0" opacity="0.85" />
                     </g>
                   );

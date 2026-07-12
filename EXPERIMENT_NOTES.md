@@ -19,11 +19,17 @@ rewriting a working, user-facing picker to gain a light/dark indirection the
 app can't use — there is no dark theme (`tokens.css` is deliberately a single
 warm palette; "card backs are always cream" is a design law here). So:
 
-- Colors stay hex in `profiles.accent_color`.
+- Colors stay hex in `profiles.accent_color` (no migration, no picker churn).
 - New shared code path: `src/lib/partnerColors.js` (`colorForUser(userId,
   partners)`). Both features derive color from `author_id` at render time;
   color is never stored per-row — the brief's actual invariant, which is
   preserved. Changing your accent repaints your whole history everywhere.
+- Inside the helper, the six known palette hexes map to CSS custom
+  properties (`--terracotta`, `--brass`, `--sage`, `--plum`, `--slate`,
+  `--sienna` in `tokens.css`); an unknown hex passes through as-is. So a
+  future dark mode or key migration only touches the hook + tokens, not the
+  consumers. One gotcha this surfaced: `var()` doesn't resolve in SVG
+  presentation attributes, so the sky dots set fill via `style`.
 - The "light and dark token themes" acceptance criterion is moot for the same
   reason. The sky panel is a warm near-black from the chain family, on the
   parchment page — it reads as one theme, by design.

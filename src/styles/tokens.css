@@ -25,9 +25,14 @@
   /* Card back (always light, always warm paper) */
   --card-back: #F8F2E4;
 
-  /* Partner accent defaults */
+  /* Partner accents — the six pickable profile colours. Keep in sync with
+     SettingsSheet's palette and the hex → token map in lib/partnerColors.js. */
   --terracotta: #9C5E4A;
   --brass:      #B8955A;
+  --sage:       #6B8C72;
+  --plum:       #7A6B8C;
+  --slate:      #5A7A8C;
+  --sienna:     #8C6B5A;
 
   /* Type families */
   --serif:  'Playfair Display', Georgia, serif;
