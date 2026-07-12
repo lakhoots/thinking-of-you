@@ -21,9 +21,12 @@ export default function SignIn() {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
       }
-      // Success unmounts this view without a navigation; blur first so
-      // Safari sees the form session end and offers to save the password.
+      // Success unmounts this view without a real navigation. Give Safari's
+      // save-password heuristic its two strongest SPA signals: end the form
+      // session (blur) and record a same-document navigation (pushState) —
+      // WebKit treats the latter as "login completed, offer to save".
       document.activeElement?.blur?.();
+      window.history.pushState(null, '', window.location.href);
     } catch (err) {
       setError(err.message);
     } finally {
