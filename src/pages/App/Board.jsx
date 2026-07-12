@@ -795,9 +795,11 @@ export default function Board({
             <ListSheet
               memento={dm}
               author={dAuthor}
+              partners={partners}
               currentUserId={currentUserProfile?.id}
               onClose={() => setDetailId(null)}
               onItemsChanged={(items) => onMementoSaved?.({ id: dm.id, list_items: items })}
+              onStickersChanged={(stickers) => onMementoSaved?.({ id: dm.id, stickers })}
               onDeleteRequested={(id) => {
                 setDetailId(null);
                 requestDelete(id);

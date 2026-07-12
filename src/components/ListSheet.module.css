@@ -287,6 +287,65 @@
   margin: 10px 18px 0;
 }
 
+.stickersSection {
+  margin: 14px 18px 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(26, 18, 8, 0.1);
+}
+
+.stickersLabel {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(44, 26, 10, 0.45);
+  margin-bottom: 10px;
+}
+
+.stickerRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.stickerEmoji {
+  font-size: 20px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.stickerInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.stickerCaption {
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.35;
+  overflow-wrap: break-word;
+}
+
+.stickerMeta {
+  font-size: 11px;
+  color: rgba(44, 26, 10, 0.48);
+  margin-top: 1px;
+}
+
+.stickerPeel {
+  border: none;
+  background: none;
+  font-family: var(--sans);
+  font-size: 12px;
+  color: rgba(44, 26, 10, 0.48);
+  cursor: pointer;
+  padding: 6px 4px;
+  flex-shrink: 0;
+}
+
+.stickerPeel:hover { color: #B53A2A; }
+
 .footer {
   margin: 18px 18px;
   padding-top: 16px;

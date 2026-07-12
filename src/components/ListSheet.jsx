@@ -8,6 +8,10 @@ import {
   reorderListItems,
 } from '../lib/mementos';
 import { getListTheme } from '../lib/listThemes';
+import { deleteSticker } from '../lib/stickers';
+import { colorForUser } from '../lib/partnerColors';
+import { FEATURE_STICKERS } from '../lib/flags';
+import { fmtDate } from '../lib/format';
 import { ListGlyph } from './ListSticker';
 import styles from './ListSheet.module.css';
 
@@ -115,9 +119,11 @@ function EditRow({ item, onRemove, onDragStart, onDragEnd, editing, editingText,
 export default function ListSheet({
   memento,
   author,
+  partners,
   currentUserId,
   onClose,
   onItemsChanged,
+  onStickersChanged,
   onDeleteRequested,
 }) {
   const theme = getListTheme(memento?.list_theme);
@@ -238,6 +244,15 @@ export default function ListSheet({
     setEditMode((m) => !m);
   };
 
+  const peelSticker = async (id) => {
+    try {
+      await deleteSticker(id);
+      onStickersChanged?.((memento.stickers ?? []).filter((s) => s.id !== id));
+    } catch (err) {
+      console.error('peel sticker', err);
+    }
+  };
+
   return (
     <div
       className={styles.overlay}
@@ -334,6 +349,41 @@ export default function ListSheet({
         </div>
 
         {error && <div className={styles.error}>{error}</div>}
+
+        {!editMode && FEATURE_STICKERS && (memento.stickers?.length ?? 0) > 0 && (
+          <div className={styles.stickersSection}>
+            <div className={styles.stickersLabel}>Stickers</div>
+            {memento.stickers.map((s) => {
+              const sAuthor = (partners ?? []).find((p) => p.id === s.author_id);
+              const color = colorForUser(s.author_id, partners);
+              return (
+                <div key={s.id} className={styles.stickerRow}>
+                  <span className={styles.stickerEmoji}>{s.emoji}</span>
+                  <div className={styles.stickerInfo}>
+                    {s.caption && (
+                      <div className={styles.stickerCaption} style={{ color }}>
+                        {s.caption}
+                      </div>
+                    )}
+                    <div className={styles.stickerMeta}>
+                      {sAuthor?.name ? `${sAuthor.name} · ` : ''}
+                      {fmtDate(s.created_at?.slice(0, 10))}
+                    </div>
+                  </div>
+                  {currentUserId === s.author_id && (
+                    <button
+                      type="button"
+                      className={styles.stickerPeel}
+                      onClick={() => peelSticker(s.id)}
+                    >
+                      Peel off
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
 
         <div className={styles.footer}>
           <div className={styles.authorBlock}>
