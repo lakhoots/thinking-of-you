@@ -4,7 +4,7 @@ Guidance for AI coding agents working in this repo. Humans: see `README.md` for
 the full writeup.
 
 **Made Me Think of You** — a Vite + React app (CSS Modules, no Tailwind) on
-Supabase (auth, postgres, realtime, storage), hosted on Netlify.
+Supabase (auth, postgres, realtime, storage), hosted on Cloudflare Workers.
 
 ## Commands
 

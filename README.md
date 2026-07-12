@@ -12,7 +12,7 @@ Built by **Lauren & Utku**.
 - **Vite + React** (front end)
 - **CSS Modules** (one styles file per component)
 - **Supabase** (auth, postgres, realtime, storage)
-- **Netlify** (hosting, deploys on push to `main`)
+- **Cloudflare Workers** (hosting, deploys on push to `main`)
 
 ---
 
@@ -58,12 +58,36 @@ The app needs a Supabase project. Follow these steps:
 
 ## Deploy
 
-Deploys are handled by Netlify, connected to this repo. Pushes to `main`
-trigger a production deploy automatically. Build settings live in
-`netlify.toml`.
+The app is a Cloudflare Worker (`thinking-of-you`) serving the Vite build out
+of `dist/` as static assets — see `wrangler.jsonc`.
 
-The same two env vars (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`) need to
-be set in **Netlify → Site settings → Environment variables**.
+Deploys run in Cloudflare, not GitHub Actions. **Workers Builds** is connected
+to this repo: every push to `main` builds and deploys to production
+automatically. Nobody has to run a deploy by hand.
+
+Its settings live in the Cloudflare dashboard under **Workers & Pages →
+thinking-of-you → Settings → Build**:
+
+| Setting | Value |
+| --- | --- |
+| Build command | `npm run build` |
+| Deploy command | `npx wrangler deploy` |
+| Branch | `main` |
+
+Because Vite inlines `VITE_*` at build time, both env vars must exist as
+**build variables** in those same settings (not runtime variables — the Worker
+reads nothing at runtime):
+
+```
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
+
+Miss them and the build still succeeds, but ships a bundle that can't reach
+Supabase.
+
+To deploy from your machine instead — a hotfix, or checking something before
+it lands on `main` — `npm run deploy` still works and uses `.env.local`.
 
 ---
 
