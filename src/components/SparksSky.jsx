@@ -11,6 +11,7 @@ import {
   shiftMonth,
 } from '../lib/sky';
 import { colorForUser } from '../lib/partnerColors';
+import { fallbackToFull } from '../lib/thumbFallback';
 import styles from './SparksSky.module.css';
 
 // The sky is a fixed 360×520 viewBox scaled to the panel width, so dot
@@ -23,7 +24,7 @@ const PAD_Y = 28;
 const dotX = (x01) => PAD_X + x01 * (VIEW_W - PAD_X * 2);
 const dotY = (y01) => PAD_Y + y01 * (VIEW_H - PAD_Y * 2);
 
-export default function SparksSky({ sparks, profiles, onClose }) {
+export default function SparksSky({ sparks, profiles, onClose, onOpenSpark }) {
   const span = useMemo(() => monthSpan(sparks), [sparks]);
   // cursor: the month on show; dir: which way the last change went, so the
   // page slides in from the side you swiped toward.
@@ -66,11 +67,26 @@ export default function SparksSky({ sparks, profiles, onClose }) {
 
   const line = lifetimeLine(sparks);
   const bloomSpark = bloom?.spark;
+  // Slide the bubble along its own width so it always stays inside the
+  // padded sky: a dot at the far left gets the bubble growing rightward
+  // from it, far right leftward, centre stays centred. (No tail to betray
+  // the offset.)
+  const bloomAlign = bloom
+    ? (dotX(bloom.x01) - PAD_X) / (VIEW_W - PAD_X * 2)
+    : 0.5;
+  // Cover photo for the bloom — photo stack first, legacy cover URL second
+  // (same fallback SparkCard uses).
+  const bloomPhotos = bloomSpark
+    ? (bloomSpark.photos?.length
+        ? bloomSpark.photos
+        : bloomSpark.image_url
+          ? [{ id: 'cover', image_url: bloomSpark.image_url, thumb_url: bloomSpark.thumb_url }]
+          : [])
+    : [];
+  const bloomCover = bloomPhotos[0] ?? null;
   // Bubble sits above its dot unless the dot is near the top of the sky.
   const bloomBelow = bloom ? bloom.y01 < 0.22 : false;
-  const bloomLeftPct = bloom
-    ? Math.min(80, Math.max(20, (dotX(bloom.x01) / VIEW_W) * 100))
-    : 0;
+  const bloomLeftPct = bloom ? (dotX(bloom.x01) / VIEW_W) * 100 : 0;
   const bloomTopPct = bloom ? (dotY(bloom.y01) / VIEW_H) * 100 : 0;
 
   return (
@@ -179,8 +195,8 @@ export default function SparksSky({ sparks, profiles, onClose }) {
                   left: `${bloomLeftPct}%`,
                   top: `${bloomTopPct}%`,
                   transform: bloomBelow
-                    ? 'translate(-50%, 14px)'
-                    : 'translate(-50%, calc(-100% - 14px))',
+                    ? `translate(-${bloomAlign * 100}%, 14px)`
+                    : `translate(-${bloomAlign * 100}%, calc(-100% - 14px))`,
                 }}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
@@ -189,13 +205,31 @@ export default function SparksSky({ sparks, profiles, onClose }) {
               >
               <motion.div
                 className={styles.bloom}
-                style={{ transformOrigin: bloomBelow ? 'top center' : 'bottom center' }}
+                style={{
+                  transformOrigin: `${bloomAlign * 100}% ${bloomBelow ? '0%' : '100%'}`,
+                }}
                 initial={{ opacity: 0, scale: 0.4 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.6 }}
                 transition={{ type: 'spring', stiffness: 420, damping: 26 }}
                 onClick={(e) => e.stopPropagation()}
               >
+                {bloomCover && (
+                  <div className={styles.bloomPhotoWrap}>
+                    <img
+                      className={styles.bloomPhoto}
+                      src={bloomCover.thumb_url || bloomCover.image_url}
+                      alt=""
+                      draggable={false}
+                      onError={fallbackToFull(bloomCover.image_url)}
+                    />
+                    {bloomPhotos.length > 1 && (
+                      <span className={styles.bloomPhotoMore}>
+                        +{bloomPhotos.length - 1}
+                      </span>
+                    )}
+                  </div>
+                )}
                 {bloomSpark.emoji && (
                   <div className={styles.bloomEmoji}>{bloomSpark.emoji}</div>
                 )}
@@ -213,6 +247,18 @@ export default function SparksSky({ sparks, profiles, onClose }) {
                   />
                   {relativeDay(bloomSpark.created_at)}
                 </div>
+                {onOpenSpark && (
+                  <button
+                    type="button"
+                    className={styles.bloomLink}
+                    onClick={() => onOpenSpark(bloomSpark.id)}
+                  >
+                    See it in the feed
+                    <svg viewBox="0 0 24 24" width="11" height="11" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M9 6l6 6-6 6" />
+                    </svg>
+                  </button>
+                )}
               </motion.div>
               </motion.div>
             )}
