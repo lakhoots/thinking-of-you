@@ -65,6 +65,28 @@ export default function StickerComposer({
     return () => window.removeEventListener('keydown', onKey);
   }, [onClose]);
 
+  // iOS scrolls the page to "reveal" the focused caption input even though
+  // the sheet already lifts itself above the keyboard via --kb-vh — the two
+  // corrections stack and drag every fixed overlay off-screen. The page
+  // behind the composer never legitimately scrolls, so while the composer
+  // is open, pin the scroll position back to zero whenever it moves.
+  useEffect(() => {
+    const vv = window.visualViewport;
+    const reset = () => {
+      const se = document.scrollingElement;
+      if (se && se.scrollTop !== 0) se.scrollTop = 0;
+      if (window.scrollY !== 0) window.scrollTo(0, 0);
+    };
+    vv?.addEventListener('resize', reset);
+    vv?.addEventListener('scroll', reset);
+    window.addEventListener('scroll', reset);
+    return () => {
+      vv?.removeEventListener('resize', reset);
+      vv?.removeEventListener('scroll', reset);
+      window.removeEventListener('scroll', reset);
+    };
+  }, []);
+
   const overCap = caption.trim().length > STICKER_CAPTION_MAX;
   const emoji = picked.join('');
   const canStick = picked.length > 0 && !overCap && !saving;

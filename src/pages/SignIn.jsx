@@ -21,6 +21,9 @@ export default function SignIn() {
         const { error } = await supabase.auth.signUp({ email, password });
         if (error) throw error;
       }
+      // Success unmounts this view without a navigation; blur first so
+      // Safari sees the form session end and offers to save the password.
+      document.activeElement?.blur?.();
     } catch (err) {
       setError(err.message);
     } finally {
