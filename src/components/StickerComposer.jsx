@@ -7,10 +7,10 @@ import styles from './StickerComposer.module.css';
 
 // Curated, warm, everyday — not a full emoji keyboard.
 const CURATED = [
-  '❤️', '🥰', '😍', '🥺', '😂', '😭',
-  '🫶', '💌', '✨', '🌟', '🌙', '🌈',
-  '🌻', '🌊', '🍝', '☕', '🧸', '🎵',
-  '📚', '🏡', '✈️', '🐱', '🐶', '🤍',
+  '❤️', '♥️', '😘', '😍', '🥰', '🥹',
+  '😭', '🤯', '😂', '😋', '🧐', '😎',
+  '🤩', '😳', '🤠', '😈', '💪', '✨',
+  '💫', '✅', '💦', '👄', '🍑', '🦈',
 ];
 
 const RECENTS_KEY = 'mmtoy-sticker-recents';
