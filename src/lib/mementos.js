@@ -1,5 +1,7 @@
 import { supabase } from './supabase';
 import { compressImageWithThumb, extForMime } from './image';
+import { demoStickersFor } from './stickers';
+import { STICKERS_DEMO } from './flags';
 
 const BOARD_W = 3200;
 const BOARD_H = 2600;
@@ -182,9 +184,11 @@ export async function listMementos(partnershipId) {
     ...m,
     photos: (m.photos ?? []).slice().sort((a, b) => a.position - b.position),
     list_items: (m.list_items ?? []).slice().sort((a, b) => a.position - b.position),
-    stickers: (m.stickers ?? []).slice().sort((a, b) =>
-      (a.created_at < b.created_at ? -1 : 1),
-    ),
+    stickers: STICKERS_DEMO
+      ? demoStickersFor(m.id)
+      : (m.stickers ?? []).slice().sort((a, b) =>
+          (a.created_at < b.created_at ? -1 : 1),
+        ),
   }));
 }
 

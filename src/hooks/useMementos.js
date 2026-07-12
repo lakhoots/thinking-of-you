@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { listMementos, fetchMementoPhotos, fetchMementoListItems } from '../lib/mementos';
 import { fetchStickers } from '../lib/stickers';
-import { FEATURE_STICKERS } from '../lib/flags';
+import { FEATURE_STICKERS, STICKERS_DEMO } from '../lib/flags';
 
 export function useMementos(partnershipId) {
   const [mementos, setMementos] = useState([]);
@@ -114,7 +114,8 @@ export function useMementos(partnershipId) {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'stickers' },
         async (payload) => {
-          if (!FEATURE_STICKERS) return;
+          // Demo stickers are local-only; no realtime events exist for them.
+          if (!FEATURE_STICKERS || STICKERS_DEMO) return;
           // RLS limits these events to our partnership. Refetch the affected
           // memento's stickers so both boards stay in sync.
           const mementoId = payload.new?.memento_id || payload.old?.memento_id;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { createSticker, STICKER_CAPTION_MAX } from '../lib/stickers';
 import { createMemento } from '../lib/mementos';
 import { todayStr } from '../lib/format';
+import { STICKERS_DEMO } from '../lib/flags';
 import styles from './StickerComposer.module.css';
 
 // Curated, warm, everyday — not a full emoji keyboard.
@@ -147,6 +148,11 @@ export default function StickerComposer({
       <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
         <div className={styles.handle} />
         <div className={styles.title}>Stick something on it</div>
+        {STICKERS_DEMO && (
+          <div className={styles.demoHint}>
+            Preview mode — stickers stay in this browser, only you see them.
+          </div>
+        )}
 
         <div className={styles.grid}>
           {palette.map((e) => (
@@ -179,9 +185,11 @@ export default function StickerComposer({
             type="button"
             className={styles.convert}
             onClick={convertToNote}
-            disabled={saving}
+            disabled={saving || STICKERS_DEMO}
           >
-            That&rsquo;s more than a sticker — turn it into a note?
+            {STICKERS_DEMO
+              ? 'That’s more than a sticker — it would offer to become a real note.'
+              : 'That’s more than a sticker — turn it into a note?'}
           </button>
         )}
 

@@ -5,6 +5,15 @@ Branch: `experiment/sky-stickers`. Both features are gated by
 `'true'`/`'false'` wins; unset means **on in dev, off in production builds**.
 So merging this branch ships nothing visible until the env vars flip on.
 
+`VITE_FEATURE_STICKERS=demo` is a third state: the full sticker UI runs, but
+stickers live in the browser's localStorage instead of the database — for
+previewing the mechanics on the real board before the migration is applied.
+Demo stickers are visible only in that browser; the note-conversion affordance
+is disabled there (it would write a real note). Flip `demo` → unset/`true`
+once the migration ships; stale demo stickers are simply ignored (they're
+never merged in non-demo mode) and can be cleared by removing the
+`mmtoy-demo-stickers` localStorage key.
+
 ## Decisions and deviations from the brief
 
 ### Partner colors: kept the existing hex system

@@ -10,4 +10,10 @@ function flag(value) {
 }
 
 export const FEATURE_SKY = flag(import.meta.env.VITE_FEATURE_SKY);
-export const FEATURE_STICKERS = flag(import.meta.env.VITE_FEATURE_STICKERS);
+
+// Stickers additionally support VITE_FEATURE_STICKERS=demo: the full UI runs,
+// but stickers live in this browser's localStorage instead of the database —
+// for previewing the mechanics before the migration ships. Only you see them.
+export const STICKERS_DEMO = import.meta.env.VITE_FEATURE_STICKERS === 'demo';
+export const FEATURE_STICKERS =
+  STICKERS_DEMO || flag(import.meta.env.VITE_FEATURE_STICKERS);
