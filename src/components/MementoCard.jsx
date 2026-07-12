@@ -1,12 +1,14 @@
 import { fmtDate } from '../lib/format';
 import ListSticker from './ListSticker';
+import MementoStickers from './MementoStickers';
 import { fallbackToFull } from '../lib/thumbFallback';
+import { FEATURE_STICKERS } from '../lib/flags';
 import styles from './MementoCard.module.css';
 
 const CARD_W = 138;
 const CARD_H = 170;
 
-export default function MementoCard({ memento, author, flipped, entering, x, y, rotationOverride, scaleOverride, scaleYOverride, onOpenDetail, arrangeMode, dragging, selected }) {
+export default function MementoCard({ memento, author, partners, flipped, entering, x, y, rotationOverride, scaleOverride, scaleYOverride, onOpenDetail, arrangeMode, dragging, selected, stickersFanned }) {
   const { type, image_url, thumb_url, title, note, emoji, date, rotation: baseRotation, scale: baseScale, scale_y: baseScaleY, has_transparency: hasTransparency } = memento;
   const rotation = rotationOverride ?? baseRotation;
   const scaleX = scaleOverride ?? baseScale ?? 1;
@@ -142,6 +144,15 @@ export default function MementoCard({ memento, author, flipped, entering, x, y, 
           </div>
         </div>
       </div>
+      {FEATURE_STICKERS && (
+        <MementoStickers
+          stickers={memento.stickers}
+          partners={partners}
+          hidden={flipped}
+          fanned={stickersFanned}
+          chipEnabled={!arrangeMode}
+        />
+      )}
     </div>
   );
 }

@@ -4,6 +4,8 @@
   user-select: none;
   -webkit-user-select: none;
   -webkit-user-drag: none;
+  /* No iOS image-save callout on long-press — it's the sticker gesture. */
+  -webkit-touch-callout: none;
 }
 
 .wrap img {

@@ -1,6 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { fmtDate } from '../lib/format';
 import { updateMemento } from '../lib/mementos';
+import { deleteSticker } from '../lib/stickers';
+import { colorForUser } from '../lib/partnerColors';
+import { FEATURE_STICKERS } from '../lib/flags';
 import PhotoLightbox from './PhotoLightbox';
 import { fallbackToFull } from '../lib/thumbFallback';
 import styles from './MementoDetailSheet.module.css';
@@ -8,10 +11,12 @@ import styles from './MementoDetailSheet.module.css';
 export default function MementoDetailSheet({
   memento,
   author,
+  partners,
   currentUserId,
   partnershipId,
   onClose,
   onSaved,
+  onStickersChanged,
   onDeleteRequested,
 }) {
   const carouselRef = useRef(null);
@@ -143,6 +148,15 @@ export default function MementoDetailSheet({
     // Parent will manage the undo window. We close the sheet so the user
     // can see the snackbar and the board layout without the modal.
     onClose();
+  };
+
+  const peelSticker = async (id) => {
+    try {
+      await deleteSticker(id);
+      onStickersChanged?.((memento.stickers ?? []).filter((s) => s.id !== id));
+    } catch (err) {
+      console.error('peel sticker', err);
+    }
   };
 
   return (
@@ -328,6 +342,41 @@ export default function MementoDetailSheet({
                 </button>
               </div>
             </div>
+          </div>
+        )}
+
+        {!editing && FEATURE_STICKERS && (memento.stickers?.length ?? 0) > 0 && (
+          <div className={styles.stickersSection}>
+            <div className={styles.stickersLabel}>Stickers</div>
+            {memento.stickers.map((s) => {
+              const sAuthor = (partners ?? []).find((p) => p.id === s.author_id);
+              const color = colorForUser(s.author_id, partners);
+              return (
+                <div key={s.id} className={styles.stickerRow}>
+                  <span className={styles.stickerEmoji}>{s.emoji}</span>
+                  <div className={styles.stickerInfo}>
+                    {s.caption && (
+                      <div className={styles.stickerCaption} style={{ color }}>
+                        {s.caption}
+                      </div>
+                    )}
+                    <div className={styles.stickerMeta}>
+                      {sAuthor?.name ? `${sAuthor.name} · ` : ''}
+                      {fmtDate(s.created_at?.slice(0, 10))}
+                    </div>
+                  </div>
+                  {currentUserId === s.author_id && (
+                    <button
+                      type="button"
+                      className={styles.stickerPeel}
+                      onClick={() => peelSticker(s.id)}
+                    >
+                      Peel off
+                    </button>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
 

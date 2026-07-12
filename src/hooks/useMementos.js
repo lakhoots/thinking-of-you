@@ -1,6 +1,8 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { listMementos, fetchMementoPhotos, fetchMementoListItems } from '../lib/mementos';
+import { fetchStickers } from '../lib/stickers';
+import { FEATURE_STICKERS, STICKERS_DEMO } from '../lib/flags';
 
 export function useMementos(partnershipId) {
   const [mementos, setMementos] = useState([]);
@@ -40,8 +42,8 @@ export function useMementos(partnershipId) {
         (payload) => {
           setMementos((prev) => {
             if (prev.some((m) => m.id === payload.new.id)) return prev;
-            // Photos / list items populate via their own realtime streams.
-            return [...prev, { ...payload.new, photos: [], list_items: [] }];
+            // Photos / list items / stickers populate via their own realtime streams.
+            return [...prev, { ...payload.new, photos: [], list_items: [], stickers: [] }];
           });
         },
       )
@@ -105,6 +107,26 @@ export function useMementos(partnershipId) {
             );
           } catch (err) {
             console.error('memento_list_items refetch', err);
+          }
+        },
+      )
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'stickers' },
+        async (payload) => {
+          // Demo stickers are local-only; no realtime events exist for them.
+          if (!FEATURE_STICKERS || STICKERS_DEMO) return;
+          // RLS limits these events to our partnership. Refetch the affected
+          // memento's stickers so both boards stay in sync.
+          const mementoId = payload.new?.memento_id || payload.old?.memento_id;
+          if (!mementoId) return;
+          try {
+            const stickers = await fetchStickers(mementoId);
+            setMementos((prev) =>
+              prev.map((m) => (m.id === mementoId ? { ...m, stickers } : m)),
+            );
+          } catch (err) {
+            console.error('stickers refetch', err);
           }
         },
       )
