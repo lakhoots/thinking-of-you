@@ -21,7 +21,9 @@ export default function MementoStickers({ stickers, partners, hidden, fanned, ch
       <AnimatePresence>
         {visible.map((s, i) => {
           const color = colorForUser(s.author_id, partners);
-          const below = s.anchor_y < 0.28;
+          // The bubble grows away from the card's centre — top-half anchors
+          // bloom upward, bottom-half downward — keeping the middle clear.
+          const below = s.anchor_y >= 0.5;
           return (
             <motion.div
               key={s.id}

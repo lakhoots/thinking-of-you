@@ -40,6 +40,34 @@ export function pickStickerRotation() {
   return (Math.random() - 0.5) * 10;
 }
 
+// Stickers are marginalia, not graffiti: wherever the card was pressed, the
+// anchor snaps to the nearest point on a band along the card's edges, then
+// slides along that frame to the closest spot that keeps clear of existing
+// stickers — so the photo or text underneath stays readable.
+const CARD_ASPECT = 170 / 138; // CARD_H / CARD_W in MementoCard
+const EDGE_INSET = 0.13;
+const MIN_CLEARANCE = 0.26; // aspect-weighted anchor units
+
+export function pickStickerAnchor(pressX, pressY, existing = []) {
+  const lo = EDGE_INSET;
+  const hi = 1 - EDGE_INSET;
+  const candidates = [];
+  const steps = 10;
+  for (let i = 0; i <= steps; i++) {
+    const t = lo + (i / steps) * (hi - lo);
+    candidates.push({ x: t, y: lo }, { x: t, y: hi }, { x: lo, y: t }, { x: hi, y: t });
+  }
+  const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, (ay - by) * CARD_ASPECT);
+  candidates.sort(
+    (a, b) => dist(a.x, a.y, pressX, pressY) - dist(b.x, b.y, pressX, pressY),
+  );
+  const isClear = (c) =>
+    (existing ?? []).every(
+      (s) => dist(c.x, c.y, s.anchor_x, s.anchor_y) >= MIN_CLEARANCE,
+    );
+  return candidates.find(isClear) ?? candidates[0];
+}
+
 export async function fetchStickers(mementoId) {
   if (STICKERS_DEMO) return demoStickersFor(mementoId);
   const { data, error } = await supabase

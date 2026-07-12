@@ -4,6 +4,7 @@ import MementoDetailSheet from '../../components/MementoDetailSheet';
 import ListSheet from '../../components/ListSheet';
 import StickerComposer from '../../components/StickerComposer';
 import { deleteMemento, moveMementos } from '../../lib/mementos';
+import { pickStickerAnchor } from '../../lib/stickers';
 import { FEATURE_STICKERS } from '../../lib/flags';
 import styles from './Board.module.css';
 
@@ -300,12 +301,19 @@ export default function Board({
             const dyLocal = -dx * sin + dy * cos;
             const scaleX = m.scale ?? 1;
             const scaleY = m.type === 'note' ? (m.scale_y ?? 1) : scaleX;
+            // Snap the pressed point to the least obstructive spot along
+            // the card's edges, dodging stickers already there.
+            const anchor = pickStickerAnchor(
+              0.5 + dxLocal / (CARD_W * scaleX),
+              0.5 + dyLocal / (CARD_H * scaleY),
+              m.stickers ?? [],
+            );
             setFlippedId(null);
             setFannedId(null);
             setStickerTarget({
               mementoId: cardId,
-              anchorX: Math.max(0.06, Math.min(0.94, 0.5 + dxLocal / (CARD_W * scaleX))),
-              anchorY: Math.max(0.06, Math.min(0.94, 0.5 + dyLocal / (CARD_H * scaleY))),
+              anchorX: anchor.x,
+              anchorY: anchor.y,
             });
           }, STICKER_PRESS_MS);
         }

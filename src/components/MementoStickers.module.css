@@ -6,11 +6,15 @@
   inset: 0;
   pointer-events: none;
   z-index: 4;
-  transition: opacity 0.25s ease;
+  /* Reappearing after a flip-back waits for the card's 0.7s flip to land,
+     then fades in — otherwise stickers pop over the still-turning card. */
+  transition: opacity 0.25s ease 0.55s;
 }
 
 .hiddenLayer {
   opacity: 0;
+  /* Hiding is immediate: vanish as the flip starts. */
+  transition: opacity 0.12s ease;
 }
 
 /* A 0×0 point at the sticker's anchor. */
