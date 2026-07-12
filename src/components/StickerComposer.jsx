@@ -94,7 +94,13 @@ export default function StickerComposer({
       onCreated?.(sticker);
       onClose();
     } catch (err) {
-      setError(err.message ?? String(err));
+      // Pre-migration state: the stickers table isn't on this database yet.
+      const msg = err.message ?? String(err);
+      setError(
+        msg.includes('stickers') && msg.includes('schema cache')
+          ? 'Stickers aren’t set up on the database yet — the migration hasn’t been applied.'
+          : msg,
+      );
       setSaving(false);
     }
   };
