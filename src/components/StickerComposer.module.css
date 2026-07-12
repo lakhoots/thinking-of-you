@@ -19,9 +19,24 @@
   padding: 14px 20px max(20px, env(safe-area-inset-bottom));
   width: 100%;
   max-height: calc(var(--kb-vh, 100vh) - 10px);
-  overflow-y: auto;
   overscroll-behavior: contain;
   animation: sheetUp 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Flex column so the emoji grid absorbs any height squeeze (keyboard):
+     everything else keeps its natural size and stays visible. */
+  display: flex;
+  flex-direction: column;
+}
+
+.sheet > * {
+  flex-shrink: 0;
+}
+
+.gridScroll {
+  flex: 0 1 auto;
+  min-height: 120px; /* ~two emoji rows stay visible even when squeezed */
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  margin-bottom: 14px;
 }
 
 @keyframes sheetUp {
@@ -56,7 +71,6 @@
   display: grid;
   grid-template-columns: repeat(6, 1fr);
   gap: 6px;
-  margin-bottom: 14px;
 }
 
 .emojiBtn {

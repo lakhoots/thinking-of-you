@@ -154,17 +154,21 @@ export default function StickerComposer({
           </div>
         )}
 
-        <div className={styles.grid}>
-          {palette.map((e) => (
-            <button
-              key={e}
-              type="button"
-              className={`${styles.emojiBtn} ${picked.includes(e) ? styles.on : ''}`}
-              onClick={() => toggleEmoji(e)}
-            >
-              {e}
-            </button>
-          ))}
+        {/* The grid is the one part that shrinks and scrolls when the
+            keyboard halves the sheet — caption and actions stay whole. */}
+        <div className={styles.gridScroll}>
+          <div className={styles.grid}>
+            {palette.map((e) => (
+              <button
+                key={e}
+                type="button"
+                className={`${styles.emojiBtn} ${picked.includes(e) ? styles.on : ''}`}
+                onClick={() => toggleEmoji(e)}
+              >
+                {e}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className={styles.captionRow}>
