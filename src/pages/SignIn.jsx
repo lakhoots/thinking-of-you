@@ -38,20 +38,29 @@ export default function SignIn() {
 
         <form className={styles.form} onSubmit={submit}>
           <label className={styles.label}>Email</label>
+          {/* autoComplete="username" (not "email") is what iOS keys saved
+              credentials to — with "email" Safari treats the form as a
+              sign-up and only ever offers a new strong password. */}
           <input
             className={styles.input}
             type="email"
+            name="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="you@somewhere.com"
             required
-            autoComplete="email"
+            autoComplete="username"
           />
 
           <label className={styles.label}>Password</label>
+          {/* key={mode} remounts the field when toggling sign-in/sign-up so
+              Safari re-reads the autocomplete hint — it classifies the field
+              once and ignores attribute changes on a live input. */}
           <input
+            key={mode}
             className={styles.input}
             type="password"
+            name="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"

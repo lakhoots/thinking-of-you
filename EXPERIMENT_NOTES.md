@@ -110,8 +110,8 @@ zoom, and card rotation carry them along with zero extra math. Consequences:
 - A dedicated hover affordance for desktop was skipped — press-and-hold works
   fine with a mouse and one gesture on both platforms is simpler. Revisit if
   it proves undiscoverable.
-- **Overflow**: a card shows 3 stickers; the rest collapse into a `+N` chip
-  that fans them out (staggered springs). The detail sheet lists all stickers
+- **Overflow**: a card shows 5 stickers (was 3; felt too eager to hide);
+  the rest collapse into a `+N` chip that fans them out (staggered springs). The detail sheet lists all stickers
   with author + date, and that's also where "Peel off" (author-only delete)
   lives — a context action rather than drag-off, which would fight the
   board's pan gesture.
@@ -150,7 +150,8 @@ should be comfortable).
   felt like scope creep.
 - **Sticker size relative to cards**: at 18px emoji on a 138px-wide card,
   stickers are prominent — marginalia that competes a little with the
-  memento itself when there are 3. If it feels loud in real use, drop
-  `MAX_VISIBLE` to 2 or scale bubbles down ~15%.
+  memento itself when several pile on. Real use said hide *less*, not more
+  (`MAX_VISIBLE` went 3 → 5); if a full card feels loud, scale bubbles down
+  ~15% rather than lowering the cap again.
 - Time-of-day mapping is linear over 24h; compressing 01:00–06:00 (per the
   brief's "later") would lift the dead band most skies will have.

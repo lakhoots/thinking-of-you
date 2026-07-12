@@ -4,7 +4,7 @@ import styles from './MementoStickers.module.css';
 
 // How many stickers a card shows on the board before collapsing into a
 // "+N" chip. The detail sheet always lists all of them.
-const MAX_VISIBLE = 3;
+const MAX_VISIBLE = 5;
 
 // The sticker layer sits inside MementoCard's positioned wrapper, so it
 // inherits the card's transform (drag, pan, zoom, rotation) for free.
