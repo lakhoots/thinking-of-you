@@ -21,6 +21,10 @@ const FIT_SCREEN_PADDING = 34;
 const PIN_BOUNDS_PAD = 26;
 const DESKTOP_WHEEL_ZOOM_SENSITIVITY = 0.00065;
 
+function clearTextSelection() {
+  window.getSelection?.()?.removeAllRanges();
+}
+
 function boundsForMementos(mementos) {
   if (!mementos.length) return null;
 
@@ -281,6 +285,7 @@ export default function Board({
         // the pressed point. Fires only if the finger stays put and single.
         const cardEl = e.target.closest('[data-card-id]');
         if (cardEl) {
+          e.preventDefault();
           const cardId = cardEl.dataset.cardId;
           const { clientX, clientY } = e;
           longPressTimer.current = setTimeout(() => {
@@ -289,6 +294,7 @@ export default function Board({
             const m = mementosRef.current.find((x) => x.id === cardId);
             if (!m) return;
             longPressFired.current = true;
+            clearTextSelection();
             // Screen → canvas → card-local, undoing the canvas transform,
             // then the card's rotation and scale, to get 0–1 face anchors.
             const { x, y, s } = tx.current;
@@ -315,6 +321,7 @@ export default function Board({
               anchorX: anchor.x,
               anchorY: anchor.y,
             });
+            requestAnimationFrame(clearTextSelection);
           }, STICKER_PRESS_MS);
         }
       }
@@ -733,6 +740,10 @@ export default function Board({
         onPointerMove={onPtrMove}
         onPointerUp={onPtrUp}
         onPointerCancel={onPtrUp}
+        onSelectStart={(e) => e.preventDefault()}
+        onContextMenu={(e) => {
+          if (FEATURE_STICKERS && e.target.closest('[data-card-id]')) e.preventDefault();
+        }}
       >
         <div
           ref={canvasRef}

@@ -9,6 +9,9 @@
   display: flex;
   align-items: flex-end;
   overflow: hidden;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
   /* Keep the compact sheet above the on-screen keyboard. */
   padding-bottom: calc(100dvh - var(--kb-vh, 100dvh));
 }
@@ -102,6 +105,9 @@
 .captionInput {
   flex: 1;
   min-width: 0;
+  user-select: text;
+  -webkit-user-select: text;
+  -webkit-touch-callout: default;
   border: 1px solid var(--border-strong);
   border-radius: 12px;
   background: var(--bg-card);
