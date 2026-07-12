@@ -2,8 +2,13 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import MementoCard, { CARD_W, CARD_H } from '../../components/MementoCard';
 import MementoDetailSheet from '../../components/MementoDetailSheet';
 import ListSheet from '../../components/ListSheet';
+import StickerComposer from '../../components/StickerComposer';
 import { deleteMemento, moveMementos } from '../../lib/mementos';
+import { FEATURE_STICKERS } from '../../lib/flags';
 import styles from './Board.module.css';
+
+// Long-press dwell before the sticker composer opens on a card.
+const STICKER_PRESS_MS = 450;
 
 const CANVAS_W = 3200;
 const CANVAS_H = 2600;
@@ -83,6 +88,22 @@ export default function Board({
   const [selectedId, setSelectedId] = useState(null);
   const draggingRef = useRef(null);
   const resizingRef = useRef(null);
+
+  // Stickers: long-press a card to open the composer at the pressed point;
+  // fannedId is the card whose overflow stickers are fanned out.
+  const [stickerTarget, setStickerTarget] = useState(null);
+  const [fannedId, setFannedId] = useState(null);
+  const longPressTimer = useRef(null);
+  const longPressFired = useRef(false);
+
+  const clearLongPress = useCallback(() => {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearLongPress, [clearLongPress]);
 
   const canvasRef = useRef(null);
   const viewportRef = useRef(null);
@@ -254,11 +275,46 @@ export default function Board({
             }
           }
         }
+      } else if (FEATURE_STICKERS) {
+        // Long-press on a card (normal mode) opens the sticker composer at
+        // the pressed point. Fires only if the finger stays put and single.
+        const cardEl = e.target.closest('[data-card-id]');
+        if (cardEl) {
+          const cardId = cardEl.dataset.cardId;
+          const { clientX, clientY } = e;
+          longPressTimer.current = setTimeout(() => {
+            longPressTimer.current = null;
+            if (moved.current || hadMulti.current || ptrs.current.size !== 1) return;
+            const m = mementosRef.current.find((x) => x.id === cardId);
+            if (!m) return;
+            longPressFired.current = true;
+            // Screen → canvas → card-local, undoing the canvas transform,
+            // then the card's rotation and scale, to get 0–1 face anchors.
+            const { x, y, s } = tx.current;
+            const dx = (clientX - x) / s - m.pos_x * CANVAS_W;
+            const dy = (clientY - y) / s - m.pos_y * CANVAS_H;
+            const rad = ((m.rotation ?? 0) * Math.PI) / 180;
+            const cos = Math.cos(rad);
+            const sin = Math.sin(rad);
+            const dxLocal = dx * cos + dy * sin;
+            const dyLocal = -dx * sin + dy * cos;
+            const scaleX = m.scale ?? 1;
+            const scaleY = m.type === 'note' ? (m.scale_y ?? 1) : scaleX;
+            setFlippedId(null);
+            setFannedId(null);
+            setStickerTarget({
+              mementoId: cardId,
+              anchorX: Math.max(0.06, Math.min(0.94, 0.5 + dxLocal / (CARD_W * scaleX))),
+              anchorY: Math.max(0.06, Math.min(0.94, 0.5 + dyLocal / (CARD_H * scaleY))),
+            });
+          }, STICKER_PRESS_MS);
+        }
       }
     } else {
       // Any second finger landing means this gesture is no longer a tap,
       // and any in-flight card interaction is abandoned in favor of pinch/zoom.
       hadMulti.current = true;
+      clearLongPress();
       if (draggingRef.current) {
         draggingRef.current = null;
         setDraggingId(null);
@@ -269,7 +325,7 @@ export default function Board({
       const [a, b] = [...ptrs.current.values()];
       pinchDist.current = Math.hypot(a.x - b.x, a.y - b.y);
     }
-  }, [arrangeMode, mementos, localEdits]);
+  }, [arrangeMode, mementos, localEdits, clearLongPress]);
 
   const onPtrMove = useCallback((e) => {
     if (!ptrs.current.has(e.pointerId)) return;
@@ -279,6 +335,7 @@ export default function Board({
     const dy = curr.y - prev.y;
     if (Math.hypot(curr.x - ptrStart.current.x, curr.y - ptrStart.current.y) > 6) {
       moved.current = true;
+      clearLongPress();
     }
 
     // Resize: pointer's distance from card center vs. starting distance
@@ -355,7 +412,7 @@ export default function Board({
       }
     }
     ptrs.current.set(e.pointerId, curr);
-  }, [applyTx]);
+  }, [applyTx, clearLongPress]);
 
   const onPtrUp = useCallback((e) => {
     const wasLast = ptrs.current.size === 1;
@@ -363,6 +420,11 @@ export default function Board({
     const wasMulti = hadMulti.current;
     const draggedId = draggingRef.current?.id ?? null;
     const resizingId = resizingRef.current?.id ?? null;
+    clearLongPress();
+    // A fired long-press already opened the composer — the release that
+    // follows must not read as a tap (which would flip the card under it).
+    const suppressTap = longPressFired.current;
+    if (wasLast) longPressFired.current = false;
     ptrs.current.delete(e.pointerId);
     pinchDist.current = null;
     if (ptrs.current.size === 0) {
@@ -391,7 +453,15 @@ export default function Board({
     // Tap: only when this was the final pointer up, the gesture never had a
     // second finger, and no movement happened. List stickers flip straight
     // open into their dedicated view; everything else flips in place.
-    if (wasLast && !wasMulti && !wasMoved) {
+    if (wasLast && !wasMulti && !wasMoved && !suppressTap) {
+      // The +N chip fans a card's overflow stickers in and out.
+      const fanEl = e.target.closest('[data-sticker-fan]');
+      if (fanEl) {
+        const cardEl = fanEl.closest('[data-card-id]');
+        const id = cardEl?.dataset.cardId;
+        if (id) setFannedId((f) => (f === id ? null : id));
+        return;
+      }
       const el = e.target.closest('[data-card-id]');
       if (el) {
         const id = el.dataset.cardId;
@@ -400,11 +470,13 @@ export default function Board({
         } else {
           setFlippedId((f) => (f === id ? null : id));
         }
+        setFannedId((f) => (f === id ? f : null));
       } else {
         setFlippedId(null);
+        setFannedId(null);
       }
     }
-  }, [arrangeMode]);
+  }, [arrangeMode, clearLongPress]);
 
   // Mouse wheel zoom — passive: false because we preventDefault.
   useEffect(() => {
@@ -509,6 +581,8 @@ export default function Board({
   const enterArrange = () => {
     setFlippedId(null);
     setSelectedId(null);
+    setFannedId(null);
+    setStickerTarget(null);
     setLocalEdits({});
     setMoveOrder([]);
     setArrangeMode(true);
@@ -675,6 +749,7 @@ export default function Board({
                 key={m.id}
                 memento={m}
                 author={authorMap[m.author_id]}
+                partners={partners}
                 flipped={flippedId === m.id}
                 entering={enteringId === m.id}
                 x={px}
@@ -686,6 +761,7 @@ export default function Board({
                 arrangeMode={arrangeMode}
                 dragging={draggingId === m.id}
                 selected={selectedId === m.id}
+                stickersFanned={fannedId === m.id}
               />
             );
           })}
@@ -714,8 +790,10 @@ export default function Board({
           <MementoDetailSheet
             memento={dm}
             author={dAuthor}
+            partners={partners}
             currentUserId={currentUserProfile?.id}
             partnershipId={currentUserProfile?.partnership_id}
+            onStickersChanged={(stickers) => onMementoSaved?.({ id: dm.id, stickers })}
             onClose={() => setDetailId(null)}
             onSaved={(updated) => {
               onMementoSaved?.(updated);
@@ -725,6 +803,26 @@ export default function Board({
               setDetailId(null);
               requestDelete(id);
             }}
+          />
+        );
+      })()}
+
+      {stickerTarget && (() => {
+        const sm = mementos.find((m) => m.id === stickerTarget.mementoId);
+        if (!sm) return null;
+        return (
+          <StickerComposer
+            memento={sm}
+            mementos={mementos}
+            partnershipId={currentUserProfile?.partnership_id}
+            authorId={currentUserProfile?.id}
+            anchorX={stickerTarget.anchorX}
+            anchorY={stickerTarget.anchorY}
+            onCreated={(sticker) =>
+              onMementoSaved?.({ id: sm.id, stickers: [...(sm.stickers ?? []), sticker] })
+            }
+            onNoteCreated={(note) => onMementoRestored?.(note)}
+            onClose={() => setStickerTarget(null)}
           />
         );
       })()}

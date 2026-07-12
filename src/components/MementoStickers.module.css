@@ -1,0 +1,119 @@
+/* Sticker marginalia layer — absolutely fills the card wrapper so anchor
+   percentages line up with the card face. The layer itself never eats
+   pointer events (taps fall through to the card); only the +N chip does. */
+.layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 4;
+  transition: opacity 0.25s ease;
+}
+
+.hiddenLayer {
+  opacity: 0;
+}
+
+/* A 0×0 point at the sticker's anchor. */
+.anchor {
+  position: absolute;
+  width: 0;
+  height: 0;
+}
+
+/* Static offset from the anchor point: bubble floats just above it
+   (or below, when the anchor is near the card's top edge). */
+.place {
+  position: absolute;
+  bottom: 5px;
+  left: 0;
+  transform: translateX(-50%);
+}
+
+.placeBelow {
+  bottom: auto;
+  top: 5px;
+}
+
+.pop {
+  /* Framer Motion animates scale here; rotation lives on .bubble. */
+}
+
+.bubble {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--bg-card);
+  border: 1.5px solid;
+  border-radius: 11px;
+  padding: 3px 7px;
+  width: max-content;
+  max-width: 128px;
+  box-shadow: 0 2px 8px rgba(26, 18, 8, 0.18);
+}
+
+.emoji {
+  font-size: 18px;
+  line-height: 1.15;
+}
+
+.caption {
+  font-family: var(--sans);
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.25;
+  overflow-wrap: break-word;
+  min-width: 0;
+}
+
+/* Speech-bubble tail: a rotated square sharing the bubble's border,
+   pointing down at the anchor (or up, for the below variant). */
+.tail {
+  position: absolute;
+  bottom: -5px;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin-left: -4px;
+  background: var(--bg-card);
+  border-right: 1.5px solid;
+  border-bottom: 1.5px solid;
+  border-color: inherit;
+  transform: rotate(45deg);
+}
+
+.tailBelow {
+  bottom: auto;
+  top: -5px;
+  border-right: none;
+  border-bottom: none;
+  border-left: 1.5px solid;
+  border-top: 1.5px solid;
+  border-color: inherit;
+}
+
+.moreChip {
+  position: absolute;
+  right: -8px;
+  bottom: -8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  color: var(--ink-dim);
+  font-family: var(--sans);
+  font-size: 10px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  pointer-events: auto;
+  box-shadow: 0 2px 6px rgba(26, 18, 8, 0.16);
+}
+
+.chipDisabled {
+  pointer-events: none;
+}
