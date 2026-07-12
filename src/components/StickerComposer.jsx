@@ -7,32 +7,15 @@ import styles from './StickerComposer.module.css';
 
 // Curated, warm, everyday — not a full emoji keyboard.
 const CURATED = [
-  '❤️', '♥️', '😘', '😍', '🥰', '🥹',
-  '😭', '🤯', '😂', '😋', '🧐', '😎',
-  '🤩', '😳', '🤠', '😈', '💪', '✨',
-  '💫', '✅', '💦', '👄', '🍑', '🦈',
+  '🦈', '😈', '💦', '🎵', '♥️', '😘',
+  '😍', '🥰', '🥹', '😭', '🤯', '😂',
+  '😋', '🧐', '😎', '🤩', '😳', '🤠',
+  '💪', '✨', '💫', '✅', '👄', '🍑',
 ];
 
-const RECENTS_KEY = 'mmtoy-sticker-recents';
 const MAX_EMOJI = 3;
 // Matches the DB check on the emoji column.
 const MAX_EMOJI_CHARS = 16;
-
-function loadRecents() {
-  try {
-    const raw = JSON.parse(localStorage.getItem(RECENTS_KEY) ?? '[]');
-    return Array.isArray(raw) ? raw.filter((e) => typeof e === 'string').slice(0, 6) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveRecents(picked) {
-  try {
-    const next = [...new Set([...picked, ...loadRecents()])].slice(0, 6);
-    localStorage.setItem(RECENTS_KEY, JSON.stringify(next));
-  } catch { /* ignore */ }
-}
 
 export default function StickerComposer({
   memento,
@@ -49,7 +32,6 @@ export default function StickerComposer({
   const [caption, setCaption] = useState('');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
-  const [recents] = useState(loadRecents);
   // The sheet opens under a still-pressed finger (long-press); ignore the
   // overlay "tap-away" for a beat so the release doesn't instantly close it.
   const tapAwayArmed = useRef(false);
@@ -113,7 +95,6 @@ export default function StickerComposer({
         anchorX,
         anchorY,
       });
-      saveRecents(picked);
       onCreated?.(sticker);
       onClose();
     } catch (err) {
@@ -163,8 +144,6 @@ export default function StickerComposer({
     onClose();
   };
 
-  const palette = [...new Set([...recents, ...CURATED])];
-
   return (
     <div className={styles.overlay} onClick={overlayClick}>
       <div className={styles.sheet} onClick={(e) => e.stopPropagation()}>
@@ -180,7 +159,7 @@ export default function StickerComposer({
             keyboard halves the sheet — caption and actions stay whole. */}
         <div className={styles.gridScroll}>
           <div className={styles.grid}>
-            {palette.map((e) => (
+            {CURATED.map((e) => (
               <button
                 key={e}
                 type="button"
