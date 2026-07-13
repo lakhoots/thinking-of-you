@@ -307,12 +307,11 @@ export default function Board({
             const dyLocal = -dx * sin + dy * cos;
             const scaleX = m.scale ?? 1;
             const scaleY = m.type === 'note' ? (m.scale_y ?? 1) : scaleX;
-            // Snap the pressed point to the least obstructive spot along
-            // the card's edges, dodging stickers already there.
+            // Place the sticker at the press point, clamped gently inside
+            // the card so the bubble stays attached to the face.
             const anchor = pickStickerAnchor(
               0.5 + dxLocal / (CARD_W * scaleX),
               0.5 + dyLocal / (CARD_H * scaleY),
-              m.stickers ?? [],
             );
             setFlippedId(null);
             setFannedId(null);

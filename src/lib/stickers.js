@@ -40,32 +40,13 @@ export function pickStickerRotation() {
   return (Math.random() - 0.5) * 10;
 }
 
-// Stickers are marginalia, not graffiti: wherever the card was pressed, the
-// anchor snaps to the nearest point on a band along the card's edges, then
-// slides along that frame to the closest spot that keeps clear of existing
-// stickers — so the photo or text underneath stays readable.
-const CARD_ASPECT = 170 / 138; // CARD_H / CARD_W in MementoCard
-const EDGE_INSET = 0.13;
-const MIN_CLEARANCE = 0.26; // aspect-weighted anchor units
+// Put the sticker where the long-press happened. A small inset keeps the
+// bubble's tail attached to the card instead of landing outside the face.
+const ANCHOR_INSET = 0.08;
 
-export function pickStickerAnchor(pressX, pressY, existing = []) {
-  const lo = EDGE_INSET;
-  const hi = 1 - EDGE_INSET;
-  const candidates = [];
-  const steps = 10;
-  for (let i = 0; i <= steps; i++) {
-    const t = lo + (i / steps) * (hi - lo);
-    candidates.push({ x: t, y: lo }, { x: t, y: hi }, { x: lo, y: t }, { x: hi, y: t });
-  }
-  const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, (ay - by) * CARD_ASPECT);
-  candidates.sort(
-    (a, b) => dist(a.x, a.y, pressX, pressY) - dist(b.x, b.y, pressX, pressY),
-  );
-  const isClear = (c) =>
-    (existing ?? []).every(
-      (s) => dist(c.x, c.y, s.anchor_x, s.anchor_y) >= MIN_CLEARANCE,
-    );
-  return candidates.find(isClear) ?? candidates[0];
+export function pickStickerAnchor(pressX, pressY) {
+  const clamp = (n) => Math.max(ANCHOR_INSET, Math.min(1 - ANCHOR_INSET, n));
+  return { x: clamp(pressX), y: clamp(pressY) };
 }
 
 export async function fetchStickers(mementoId) {
